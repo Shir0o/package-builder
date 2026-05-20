@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { VerseGroup, VersesData } from "../../types";
 import { Icons } from "../../icons";
 import { parseVerses, stringifyVerses } from "../../lib/verses";
@@ -8,9 +8,17 @@ type Props = { data: VersesData; set: (patch: Partial<VersesData>) => void };
 export function VersesEditor({ data, set }: Props) {
   const [mode, setMode] = useState<"list" | "bulk">("list");
   const [bulkText, setBulkText] = useState(() => stringifyVerses(data.groups));
+  const lastProducedGroups = useRef<VerseGroup[] | null>(null);
 
   // Keep bulkText in sync with data.groups when they change from outside (e.g. card edits, undo/redo, etc.)
   useEffect(() => {
+    if (
+      lastProducedGroups.current &&
+      JSON.stringify(lastProducedGroups.current) === JSON.stringify(data.groups)
+    ) {
+      return;
+    }
+
     const parsed = parseVerses(bulkText);
     const isEquivalent = JSON.stringify(parsed) === JSON.stringify(data.groups);
     if (!isEquivalent) {
@@ -29,7 +37,9 @@ export function VersesEditor({ data, set }: Props) {
 
   const handleBulkChange = (text: string) => {
     setBulkText(text);
-    set({ groups: parseVerses(text) });
+    const parsed = parseVerses(text);
+    lastProducedGroups.current = parsed;
+    set({ groups: parsed });
   };
 
   return (

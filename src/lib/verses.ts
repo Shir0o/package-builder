@@ -23,8 +23,8 @@ export function parseVerses(text: string): VerseGroup[] {
   // Regex to match a reference at the start of a line.
   // Handles optional leading numbers (1, 2, 3) followed by letters/spaces/dots (e.g. 1 Tim, Rom., John).
   // Then a space, followed by Chapter:Verse.
-  // The Chapter:Verse can have range/list punctuation, e.g. 3:16-17 or 3:16, 17 or 3:16a.
-  const refRegex = /^([1-3]?\s*[A-Za-z\.]+(?:\s+[A-Za-z\.]+)*\s+\d+:\d+(?:[-–,]\s*\d+)*[a-zA-Z]?)(?:\s+(.*))?$/;
+  // The Chapter:Verse can have range/list punctuation, including cross-chapter references (e.g. 3:16-17 or 3:16-4:5 or 3:16, 17).
+  const refRegex = /^([1-3]?\s*[A-Za-z\.]+(?:\s+[A-Za-z\.]+)*\s+\d+:\d+(?:[-–,]\s*\d+(?::\d+)?)*[a-zA-Z]?)(?:\s+(.*))?$/;
 
   let afterEmptyLine = false;
 

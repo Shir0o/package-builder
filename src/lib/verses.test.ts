@@ -33,12 +33,14 @@ describe("parseVerses & stringifyVerses", () => {
   });
 
   it("parses complex book references and formats", () => {
-    const text = "1 Tim. 6:16 Who alone has immortality...\nRom. 8:16 The Spirit Himself...\nSong of Songs 2:1 I am a rose of Sharon...";
+    const text = "1 Tim. 6:16 Who alone has immortality...\nRom. 8:16 The Spirit Himself...\nSong of Songs 2:1 I am a rose of Sharon...\nJohn 3:16-4:5 That which is born...\n1 Cor. 13:4, 13:13 Love is...";
     const parsed = parseVerses(text);
     expect(parsed).toEqual([
       { ref: "1 Tim. 6:16", text: "Who alone has immortality..." },
       { ref: "Rom. 8:16", text: "The Spirit Himself..." },
       { ref: "Song of Songs 2:1", text: "I am a rose of Sharon..." },
+      { ref: "John 3:16-4:5", text: "That which is born..." },
+      { ref: "1 Cor. 13:4, 13:13", text: "Love is..." },
     ]);
   });
 
