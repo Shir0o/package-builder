@@ -34,13 +34,29 @@ export async function writePackageToHandle(
   await writable.close();
 }
 
+function isPackage(value: unknown): value is Package {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  if (typeof v.title !== "string") return false;
+  if (typeof v.pageNumbers !== "boolean") return false;
+  if (!Array.isArray(v.blocks)) return false;
+  return v.blocks.every(
+    (b) =>
+      b &&
+      typeof b === "object" &&
+      typeof (b as { id?: unknown }).id === "string" &&
+      typeof (b as { type?: unknown }).type === "string" &&
+      "data" in (b as object),
+  );
+}
+
 export async function readPackageFromHandle(
   handle: FileSystemFileHandle,
 ): Promise<Package> {
   const file = await handle.getFile();
   const text = await file.text();
-  const parsed = JSON.parse(text) as Package;
-  if (!parsed || !Array.isArray((parsed as Package).blocks)) {
+  const parsed: unknown = JSON.parse(text);
+  if (!isPackage(parsed)) {
     throw new Error("Invalid package file");
   }
   return parsed;

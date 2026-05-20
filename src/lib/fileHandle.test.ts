@@ -91,8 +91,45 @@ describe("fileHandle", () => {
       const h = makeHandle({ text: JSON.stringify(PKG) });
       expect(await readPackageFromHandle(h)).toEqual(PKG);
     });
-    it("throws on a non-package shape", async () => {
+    it("parses a package with a valid block", async () => {
+      const pkg: Package = {
+        title: "Y",
+        pageNumbers: true,
+        blocks: [
+          { id: "a", type: "cover", data: {} } as unknown as Package["blocks"][number],
+        ],
+      };
+      const h = makeHandle({ text: JSON.stringify(pkg) });
+      expect(await readPackageFromHandle(h)).toEqual(pkg);
+    });
+    it("throws when the top-level shape is wrong", async () => {
       const h = makeHandle({ text: JSON.stringify({ nope: true }) });
+      await expect(readPackageFromHandle(h)).rejects.toThrow(/Invalid package/);
+    });
+    it("throws when title is missing", async () => {
+      const h = makeHandle({
+        text: JSON.stringify({ pageNumbers: true, blocks: [] }),
+      });
+      await expect(readPackageFromHandle(h)).rejects.toThrow(/Invalid package/);
+    });
+    it("throws when pageNumbers is the wrong type", async () => {
+      const h = makeHandle({
+        text: JSON.stringify({ title: "X", pageNumbers: "yes", blocks: [] }),
+      });
+      await expect(readPackageFromHandle(h)).rejects.toThrow(/Invalid package/);
+    });
+    it("throws when a block is malformed", async () => {
+      const h = makeHandle({
+        text: JSON.stringify({
+          title: "X",
+          pageNumbers: true,
+          blocks: [{ id: "a", type: "cover" }],
+        }),
+      });
+      await expect(readPackageFromHandle(h)).rejects.toThrow(/Invalid package/);
+    });
+    it("throws on null", async () => {
+      const h = makeHandle({ text: "null" });
       await expect(readPackageFromHandle(h)).rejects.toThrow(/Invalid package/);
     });
     it("throws on invalid JSON", async () => {

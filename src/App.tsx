@@ -30,7 +30,7 @@ declare global {
 }
 
 function relativeTime(ms: number): string {
-  const diff = Date.now() - ms;
+  const diff = Math.max(0, Date.now() - ms);
   if (diff < 5_000) return "just now";
   if (diff < 60_000) return `${Math.floor(diff / 1000)}s ago`;
   if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
@@ -347,15 +347,29 @@ export default function App() {
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Untitled Package"
           />
-          <span
-            className="meta"
-            onClick={saveStatus === "error" ? retrySave : undefined}
-            style={
-              saveStatus === "error" ? { cursor: "pointer", color: "#c0392b" } : undefined
-            }
-          >
-            {pkg.blocks.length} blocks · {renderSaveLabel(fileHandle, saveStatus, lastSavedAt)}
-          </span>
+          {saveStatus === "error" ? (
+            <button
+              type="button"
+              className="meta"
+              onClick={retrySave}
+              style={{
+                cursor: "pointer",
+                color: "#c0392b",
+                background: "none",
+                border: "none",
+                padding: 0,
+                font: "inherit",
+              }}
+            >
+              {pkg.blocks.length} blocks ·{" "}
+              {renderSaveLabel(fileHandle, saveStatus, lastSavedAt)}
+            </button>
+          ) : (
+            <span className="meta">
+              {pkg.blocks.length} blocks ·{" "}
+              {renderSaveLabel(fileHandle, saveStatus, lastSavedAt)}
+            </span>
+          )}
         </div>
         <div className="actions">
           <button className="btn ghost tiny" onClick={newPackage}>
