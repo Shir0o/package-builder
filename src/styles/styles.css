@@ -41,6 +41,29 @@ textarea { resize: vertical; }
   grid-template-rows: 52px 1fr;
   height: 100vh;
 }
+.app.left-collapsed { grid-template-columns: 0 1fr 360px; }
+.app.right-hidden { grid-template-columns: 320px 1fr 0; }
+.app.left-collapsed.right-hidden { grid-template-columns: 0 1fr 0; }
+.app.left-collapsed .left { display: none; }
+.app.right-hidden .right { display: none; }
+
+.panel-toggle {
+  position: fixed;
+  top: 64px;
+  width: 22px;
+  height: 44px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  z-index: 6;
+  padding: 0;
+}
+.panel-toggle:hover { color: var(--ink); background: var(--bg); }
+.panel-toggle.left-toggle { left: 8px; }
+.app:not(.left-collapsed) .panel-toggle.left-toggle { left: 328px; }
 
 .topbar {
   grid-column: 1 / -1;

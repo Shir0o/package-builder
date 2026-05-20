@@ -17,6 +17,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
   const selectedIdRef = useRef(selectedId);
   selectedIdRef.current = selectedId;
 
@@ -140,7 +141,9 @@ export default function App() {
   }, []);
 
   return (
-    <div className="app">
+    <div
+      className={`app${leftCollapsed ? " left-collapsed" : ""}${selected ? "" : " right-hidden"}`}
+    >
       <header className="topbar">
         <div className="brand">
           <div className="mark">P</div>
@@ -263,6 +266,14 @@ export default function App() {
         onDuplicate={duplicateBlock}
         onAdd={addBlock}
       />
+
+      <button
+        className="panel-toggle left-toggle"
+        onClick={() => setLeftCollapsed((c) => !c)}
+        title={leftCollapsed ? "Show blocks panel" : "Hide blocks panel"}
+      >
+        <Icons.Chevron size={12} />
+      </button>
 
       <main className="center" onClick={() => setSelectedId(null)}>
         <div className="paper-stack" onClick={(e) => e.stopPropagation()}>
