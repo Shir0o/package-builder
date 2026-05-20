@@ -114,4 +114,120 @@ describe("usePackageState hook", () => {
     });
     container.remove();
   });
+
+  it("supports function initializer and function updater, and undo/redo are no-ops when stacks are empty", () => {
+    let hookRef: any = null;
+
+    function TestComponent() {
+      // Function initializer (covers the lazy-init branch).
+      hookRef = usePackageState(() => ({ ...initialPkg, title: "Lazy" }));
+      return null;
+    }
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    act(() => {
+      root.render(<TestComponent />);
+    });
+
+    expect(hookRef.pkg.title).toBe("Lazy");
+
+    // No-op paths: nothing in past/future.
+    act(() => {
+      hookRef.undo();
+      hookRef.redo();
+    });
+    expect(hookRef.pkg.title).toBe("Lazy");
+
+    // Function-updater form of pushState.
+    act(() => {
+      hookRef.pushState(
+        (s: any) => ({ ...s, pkg: { ...s.pkg, title: "From Updater" } }),
+        "edit-title",
+        false,
+      );
+    });
+    expect(hookRef.pkg.title).toBe("From Updater");
+
+    act(() => {
+      root.unmount();
+    });
+    container.remove();
+  });
+
+  it("setSelectedId resets coalescing state on change and is a no-op when unchanged", () => {
+    let hookRef: any = null;
+
+    function TestComponent() {
+      hookRef = usePackageState(initialPkg);
+      return null;
+    }
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    act(() => {
+      root.render(<TestComponent />);
+    });
+
+    const originalDateNow = Date.now;
+    let mockTime = 2_000_000;
+    globalThis.Date.now = () => mockTime;
+
+    // Seed a continuous edit so coalescing refs are non-null.
+    act(() => {
+      hookRef.pushState(
+        { pkg: { ...initialPkg, title: "A" }, selectedId: null },
+        "typing-title",
+        true,
+      );
+    });
+
+    // Selecting a different id should clear coalescing refs, so the next
+    // continuous edit of the same actionType commits a new history entry
+    // even though it happens immediately after.
+    act(() => {
+      hookRef.setSelectedId("block-1");
+    });
+    expect(hookRef.selectedId).toBe("block-1");
+
+    const undoDepthBefore = hookRef.canUndo;
+    expect(undoDepthBefore).toBe(true);
+
+    mockTime += 10;
+    act(() => {
+      hookRef.pushState(
+        { pkg: { ...hookRef.pkg, title: "B" }, selectedId: "block-1" },
+        "typing-title",
+        true,
+      );
+    });
+
+    // Undo should now return to "A" (the change after selection broke the coalesce).
+    act(() => {
+      hookRef.undo();
+    });
+    expect(hookRef.pkg.title).toBe("A");
+
+    // Re-selecting the SAME id is a no-op for coalescing refs.
+    act(() => {
+      hookRef.setSelectedId("block-1");
+    });
+    expect(hookRef.selectedId).toBe("block-1");
+
+    // Clearing selection (different id: "block-1" -> null) hits the change branch again.
+    act(() => {
+      hookRef.setSelectedId(null);
+    });
+    expect(hookRef.selectedId).toBeNull();
+
+    globalThis.Date.now = originalDateNow;
+    act(() => {
+      root.unmount();
+    });
+    container.remove();
+  });
 });
