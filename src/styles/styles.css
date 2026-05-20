@@ -62,7 +62,7 @@ textarea { resize: vertical; }
   padding: 0;
 }
 .panel-toggle:hover { color: var(--ink); background: var(--bg); }
-.panel-toggle svg { transition: transform 0.15s ease; }
+.panel-toggle svg { transition: transform 0.12s ease; }
 .panel-toggle.left-toggle { left: 8px; }
 .panel-toggle.left-toggle svg { transform: rotate(-90deg); }
 .app:not(.left-collapsed) .panel-toggle.left-toggle { left: 328px; }
