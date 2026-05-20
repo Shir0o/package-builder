@@ -52,6 +52,9 @@ function renderSaveLabel(
   return `${name} · linked`;
 }
 
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 2;
+
 export default function App() {
   const {
     pkg,
@@ -371,8 +374,6 @@ export default function App() {
 
   const selected = pkg.blocks.find((b) => b.id === selectedId) || null;
 
-  const ZOOM_MIN = 0.5;
-  const ZOOM_MAX = 2;
   const clampZoom = useCallback(
     (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z)),
     [],
@@ -461,7 +462,7 @@ export default function App() {
   return (
     <div
       className={`app${leftCollapsed ? " left-collapsed" : ""}${selected ? "" : " right-hidden"}`}
-      style={{ "--zoom": zoom } as CSSProperties}
+      style={{ "--zoom": zoom } as CSSProperties & Record<string, string | number>}
     >
       <header className="topbar">
         <div className="brand">
