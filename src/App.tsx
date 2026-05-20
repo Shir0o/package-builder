@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import type { AnyBlock, BlockTypeKey, Package } from "./types";
 import { makeBlock, uid } from "./blocks";
 import { loadPackage, savePackage } from "./lib/storage";
@@ -50,6 +51,9 @@ function renderSaveLabel(
   if (lastSavedAt) return `${name} · saved ${relativeTime(lastSavedAt)}`;
   return `${name} · linked`;
 }
+
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 2;
 
 export default function App() {
   const {
@@ -370,10 +374,15 @@ export default function App() {
 
   const selected = pkg.blocks.find((b) => b.id === selectedId) || null;
 
-  const ZOOM_MIN = 0.5;
-  const ZOOM_MAX = 2;
-  const clampZoom = (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
-  const stepZoom = (delta: number) => setZoom((z) => clampZoom(Math.round((z + delta) * 100) / 100));
+  const clampZoom = useCallback(
+    (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z)),
+    [],
+  );
+  const stepZoom = useCallback(
+    (delta: number) =>
+      setZoom((z) => clampZoom(Math.round((z + delta) * 100) / 100)),
+    [clampZoom],
+  );
   const resetZoom = useCallback(() => setZoom(1), []);
   const fitWidth = useCallback(() => {
     const el = centerRef.current;
@@ -382,7 +391,7 @@ export default function App() {
     const paperPx = 8.5 * 96;
     const available = el.clientWidth - 48;
     setZoom(clampZoom(available / paperPx));
-  }, []);
+  }, [clampZoom]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -433,7 +442,7 @@ export default function App() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [undo, redo]);
+  }, [undo, redo, stepZoom, resetZoom, deleteBlock]);
 
   // Cmd/Ctrl + wheel zoom on the document area.
   useEffect(() => {
@@ -448,12 +457,12 @@ export default function App() {
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, []);
+  }, [clampZoom]);
 
   return (
     <div
       className={`app${leftCollapsed ? " left-collapsed" : ""}${selected ? "" : " right-hidden"}`}
-      style={{ ["--zoom" as never]: zoom }}
+      style={{ "--zoom": zoom } as CSSProperties & Record<string, string | number>}
     >
       <header className="topbar">
         <div className="brand">
@@ -671,13 +680,14 @@ export default function App() {
         >
           <Icons.Minus size={13} />
         </button>
-        <div
+        <button
+          type="button"
           className="level"
           onClick={resetZoom}
           title="Reset to 100% (⌘0)"
         >
           {Math.round(zoom * 100)}%
-        </div>
+        </button>
         <button
           type="button"
           onClick={() => stepZoom(0.1)}
