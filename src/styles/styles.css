@@ -37,13 +37,10 @@ textarea { resize: vertical; }
 /* === App shell === */
 .app {
   display: grid;
-  grid-template-columns: 320px 1fr 360px;
+  grid-template-columns: 1fr;
   grid-template-rows: 52px 1fr;
   height: 100vh;
 }
-.app.left-collapsed { grid-template-columns: 0 1fr 360px; }
-.app.right-hidden { grid-template-columns: 320px 1fr 0; }
-.app.left-collapsed.right-hidden { grid-template-columns: 0 1fr 0; }
 .app.left-collapsed .left { display: none; }
 .app.right-hidden .right { display: none; }
 
@@ -184,11 +181,17 @@ textarea { resize: vertical; }
 
 /* === Left: block list === */
 .left {
+  position: fixed;
+  top: 52px;
+  bottom: 0;
+  left: 0;
+  width: 320px;
   background: var(--panel);
   border-right: 1px solid var(--line);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  z-index: 4;
 }
 .left .section-header {
   padding: 14px 14px 8px;
@@ -354,11 +357,17 @@ textarea { resize: vertical; }
 
 /* === Right: properties panel === */
 .right {
+  position: fixed;
+  top: 52px;
+  bottom: 0;
+  right: 0;
+  width: 360px;
   background: var(--panel);
   border-left: 1px solid var(--line);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  z-index: 4;
 }
 .right .panel-header {
   padding: 14px 16px 8px;
