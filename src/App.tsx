@@ -2,6 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { AnyBlock, BlockTypeKey, Package } from "./types";
 import { makeBlock, uid } from "./blocks";
 import { loadPackage, savePackage } from "./lib/storage";
+import {
+  isFsaSupported,
+  readPackageFromHandle,
+  verifyPermission,
+  writePackageToHandle,
+} from "./lib/fileHandle";
+import { getSavedHandle, setSavedHandle } from "./lib/handleStore";
 import { BlockList } from "./components/BlockList";
 import { PropertiesPanel } from "./components/PropertiesPanel";
 import { DocumentPreview } from "./components/DocumentPreview";
@@ -11,6 +18,37 @@ import { exportHTML } from "./export/html";
 import { exportMarkdown } from "./export/markdown";
 import { exportText } from "./export/text";
 import { exportJSON } from "./export/json";
+import { safeName } from "./export/util";
+
+type SaveStatus = "idle" | "saving" | "saved" | "error";
+
+declare global {
+  interface Window {
+    showSaveFilePicker?: (opts?: unknown) => Promise<FileSystemFileHandle>;
+    showOpenFilePicker?: (opts?: unknown) => Promise<FileSystemFileHandle[]>;
+  }
+}
+
+function relativeTime(ms: number): string {
+  const diff = Math.max(0, Date.now() - ms);
+  if (diff < 5_000) return "just now";
+  if (diff < 60_000) return `${Math.floor(diff / 1000)}s ago`;
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
+  return `${Math.floor(diff / 3_600_000)}h ago`;
+}
+
+function renderSaveLabel(
+  handle: FileSystemFileHandle | null,
+  status: SaveStatus,
+  lastSavedAt: number | null,
+): string {
+  if (!handle) return "saved locally";
+  const name = handle.name;
+  if (status === "saving") return `${name} · saving…`;
+  if (status === "error") return `${name} · save failed — click to retry`;
+  if (lastSavedAt) return `${name} · saved ${relativeTime(lastSavedAt)}`;
+  return `${name} · linked`;
+}
 
 export default function App() {
   const [pkg, setPkg] = useState<Package>(loadPackage);
@@ -18,17 +56,170 @@ export default function App() {
   const [toast, setToast] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [, setTick] = useState(0);
   const selectedIdRef = useRef(selectedId);
   selectedIdRef.current = selectedId;
-
-  useEffect(() => {
-    savePackage(pkg);
-  }, [pkg]);
+  const fileHandleRef = useRef<FileSystemFileHandle | null>(null);
+  fileHandleRef.current = fileHandle;
+  const firstSaveRef = useRef(true);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
     setTimeout(() => setToast((t) => (t === msg ? null : t)), 1800);
   }, []);
+
+  // Adopt previously linked file (Chromium only). queryPermission returning
+  // "granted" means we can read silently — otherwise we wait for the user to
+  // re-link via the button (a user gesture is required to re-prompt).
+  useEffect(() => {
+    if (!isFsaSupported()) return;
+    let cancelled = false;
+    (async () => {
+      const handle = await getSavedHandle();
+      if (cancelled || !handle) return;
+      const h = handle as FileSystemFileHandle & {
+        queryPermission?: (o: { mode: "read" | "readwrite" }) => Promise<PermissionState>;
+      };
+      const granted =
+        !h.queryPermission || (await h.queryPermission({ mode: "readwrite" })) === "granted";
+      if (!granted) {
+        setFileHandle(handle);
+        return;
+      }
+      try {
+        const loaded = await readPackageFromHandle(handle);
+        if (cancelled) return;
+        setPkg(loaded);
+        setFileHandle(handle);
+        setLastSavedAt(Date.now());
+        setSaveStatus("saved");
+      } catch (e) {
+        console.warn("adopt handle failed", e);
+        setFileHandle(handle);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Debounced auto-save: localStorage always, file only when linked.
+  useEffect(() => {
+    if (firstSaveRef.current) {
+      firstSaveRef.current = false;
+      return;
+    }
+    const t = setTimeout(() => {
+      savePackage(pkg);
+      const handle = fileHandleRef.current;
+      if (!handle) return;
+      setSaveStatus("saving");
+      writePackageToHandle(handle, pkg)
+        .then(() => {
+          setLastSavedAt(Date.now());
+          setSaveStatus("saved");
+        })
+        .catch((e: unknown) => {
+          console.warn("file save failed", e);
+          setSaveStatus("error");
+          showToast("Save to file failed");
+        });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [pkg, showToast]);
+
+  // Tick the relative-time label once per minute so "saved 2m ago" updates.
+  useEffect(() => {
+    if (!fileHandle || lastSavedAt == null) return;
+    const id = setInterval(() => setTick((n) => n + 1), 60_000);
+    return () => clearInterval(id);
+  }, [fileHandle, lastSavedAt]);
+
+  const linkFile = async () => {
+    if (!isFsaSupported() || !window.showSaveFilePicker) return;
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: safeName(pkg.title) + ".pkg.json",
+        types: [
+          {
+            description: "Package",
+            accept: { "application/json": [".pkg.json", ".json"] },
+          },
+        ],
+      });
+      await writePackageToHandle(handle, pkg);
+      await setSavedHandle(handle);
+      setFileHandle(handle);
+      setLastSavedAt(Date.now());
+      setSaveStatus("saved");
+      showToast(`Linked to ${handle.name}`);
+    } catch (e) {
+      if ((e as { name?: string }).name === "AbortError") return;
+      console.warn("linkFile failed", e);
+      showToast("Could not link file");
+    }
+  };
+
+  const openLinked = async () => {
+    if (!isFsaSupported() || !window.showOpenFilePicker) return;
+    try {
+      const [handle] = await window.showOpenFilePicker({
+        types: [
+          {
+            description: "Package",
+            accept: { "application/json": [".pkg.json", ".json"] },
+          },
+        ],
+        multiple: false,
+      });
+      if (!(await verifyPermission(handle, "readwrite"))) {
+        showToast("Permission denied");
+        return;
+      }
+      const loaded = await readPackageFromHandle(handle);
+      await setSavedHandle(handle);
+      setPkg(loaded);
+      setFileHandle(handle);
+      setSelectedId(null);
+      setLastSavedAt(Date.now());
+      setSaveStatus("saved");
+      showToast(`Opened ${handle.name}`);
+    } catch (e) {
+      if ((e as { name?: string }).name === "AbortError") return;
+      console.warn("openLinked failed", e);
+      showToast("Could not open file");
+    }
+  };
+
+  const unlinkFile = async () => {
+    await setSavedHandle(null);
+    setFileHandle(null);
+    setSaveStatus("idle");
+    setLastSavedAt(null);
+    showToast("Unlinked file");
+  };
+
+  const retrySave = async () => {
+    const handle = fileHandleRef.current;
+    if (!handle) return;
+    if (!(await verifyPermission(handle, "readwrite"))) {
+      showToast("Permission denied");
+      return;
+    }
+    setSaveStatus("saving");
+    try {
+      await writePackageToHandle(handle, pkg);
+      setLastSavedAt(Date.now());
+      setSaveStatus("saved");
+    } catch (e) {
+      console.warn("retry save failed", e);
+      setSaveStatus("error");
+      showToast("Save to file failed");
+    }
+  };
 
   const updateBlock = (next: AnyBlock) => {
     setPkg((p) => ({
@@ -156,7 +347,29 @@ export default function App() {
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Untitled Package"
           />
-          <span className="meta">{pkg.blocks.length} blocks · auto-saved</span>
+          {saveStatus === "error" ? (
+            <button
+              type="button"
+              className="meta"
+              onClick={retrySave}
+              style={{
+                cursor: "pointer",
+                color: "#c0392b",
+                background: "none",
+                border: "none",
+                padding: 0,
+                font: "inherit",
+              }}
+            >
+              {pkg.blocks.length} blocks ·{" "}
+              {renderSaveLabel(fileHandle, saveStatus, lastSavedAt)}
+            </button>
+          ) : (
+            <span className="meta">
+              {pkg.blocks.length} blocks ·{" "}
+              {renderSaveLabel(fileHandle, saveStatus, lastSavedAt)}
+            </span>
+          )}
         </div>
         <div className="actions">
           <button className="btn ghost tiny" onClick={newPackage}>
@@ -165,6 +378,21 @@ export default function App() {
           <button className="btn ghost tiny" onClick={loadFromFile}>
             Open…
           </button>
+          {isFsaSupported() && !fileHandle && (
+            <button className="btn ghost tiny" onClick={linkFile}>
+              Link file…
+            </button>
+          )}
+          {isFsaSupported() && !fileHandle && (
+            <button className="btn ghost tiny" onClick={openLinked}>
+              Open linked…
+            </button>
+          )}
+          {fileHandle && (
+            <button className="btn ghost tiny" onClick={unlinkFile}>
+              Unlink
+            </button>
+          )}
           <label
             style={{
               display: "inline-flex",
