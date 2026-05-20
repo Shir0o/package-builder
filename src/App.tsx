@@ -276,7 +276,7 @@ export default function App() {
       </button>
 
       <main className="center" onClick={() => setSelectedId(null)}>
-        <div className="paper-stack" onClick={(e) => e.stopPropagation()}>
+        <div className="paper-stack">
           <DocumentPreview
             pkg={pkg}
             selectedId={selectedId}
