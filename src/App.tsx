@@ -62,7 +62,7 @@ export default function App() {
     redo,
     canUndo,
     canRedo,
-  } = usePackageState(loadPackage());
+  } = usePackageState(loadPackage);
   const [toast, setToast] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
@@ -230,7 +230,7 @@ export default function App() {
     }
   };
 
-  const updateBlock = (next: AnyBlock) => {
+  const updateBlock = useCallback((next: AnyBlock) => {
     pushState(
       (s) => ({
         ...s,
@@ -242,8 +242,9 @@ export default function App() {
       `edit-block-${next.id}`,
       true // is continuous
     );
-  };
-  const deleteBlock = (id: string) => {
+  }, [pushState]);
+
+  const deleteBlock = useCallback((id: string) => {
     pushState(
       (s) => ({
         pkg: {
@@ -255,8 +256,9 @@ export default function App() {
       `delete-block-${id}`,
       false
     );
-  };
-  const duplicateBlock = (id: string) => {
+  }, [pushState]);
+
+  const duplicateBlock = useCallback((id: string) => {
     pushState(
       (s) => {
         const idx = s.pkg.blocks.findIndex((b) => b.id === id);
@@ -277,8 +279,9 @@ export default function App() {
       `duplicate-block-${id}`,
       false
     );
-  };
-  const moveBlock = (from: number, to: number) => {
+  }, [pushState]);
+
+  const moveBlock = useCallback((from: number, to: number) => {
     pushState(
       (s) => {
         const blocks = s.pkg.blocks.slice();
@@ -292,8 +295,9 @@ export default function App() {
       `move-block-${from}-${to}`,
       false
     );
-  };
-  const addBlock = (type: BlockTypeKey) => {
+  }, [pushState]);
+
+  const addBlock = useCallback((type: BlockTypeKey) => {
     const newB = makeBlock(type) as AnyBlock;
     pushState(
       (s) => {
@@ -311,8 +315,9 @@ export default function App() {
       `add-block-${type}`,
       false
     );
-  };
-  const setTitle = (title: string) => {
+  }, [pushState]);
+
+  const setTitle = useCallback((title: string) => {
     pushState(
       (s) => ({
         ...s,
@@ -321,9 +326,9 @@ export default function App() {
       "edit-title",
       true // is continuous
     );
-  };
+  }, [pushState]);
 
-  const newPackage = () => {
+  const newPackage = useCallback(() => {
     if (
       !confirm(
         "Start a fresh package? Your current one will be replaced (export first if you want to keep it).",
@@ -335,7 +340,7 @@ export default function App() {
       pageNumbers: true,
       blocks: [makeBlock("cover") as AnyBlock],
     });
-  };
+  }, [resetHistory]);
 
   const loadFromFile = () => {
     const inp = document.createElement("input");

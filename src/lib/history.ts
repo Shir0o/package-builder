@@ -6,11 +6,14 @@ export type AppState = {
   selectedId: string | null;
 };
 
-export function usePackageState(initialPkg: Package) {
-  const [state, setState] = useState<AppState>(() => ({
-    pkg: initialPkg,
-    selectedId: null,
-  }));
+export function usePackageState(initialPkg: Package | (() => Package)) {
+  const [state, setState] = useState<AppState>(() => {
+    const pkg = typeof initialPkg === "function" ? initialPkg() : initialPkg;
+    return {
+      pkg,
+      selectedId: null,
+    };
+  });
 
   const pastRef = useRef<AppState[]>([]);
   const futureRef = useRef<AppState[]>([]);
