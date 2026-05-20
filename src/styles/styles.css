@@ -134,15 +134,16 @@ textarea { resize: vertical; }
   font-weight: 500;
   transition: background .12s, border-color .12s;
 }
-.btn:hover { background: var(--bg-2); }
+.btn:not(:disabled):hover { background: var(--bg-2); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .btn.primary {
   background: var(--ink);
   color: var(--bg);
   border-color: var(--ink);
 }
-.btn.primary:hover { background: var(--ink-2); }
+.btn.primary:not(:disabled):hover { background: var(--ink-2); }
 .btn.ghost { background: transparent; border-color: transparent; color: var(--ink-2); }
-.btn.ghost:hover { background: var(--bg-2); color: var(--ink); }
+.btn.ghost:not(:disabled):hover { background: var(--bg-2); color: var(--ink); }
 .btn.tiny { padding: 4px 7px; font-size: 12px; }
 .btn.icon { padding: 6px; width: 30px; height: 30px; justify-content: center; }
 

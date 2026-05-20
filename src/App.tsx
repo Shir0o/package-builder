@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { AnyBlock, BlockTypeKey, Package } from "./types";
 import { makeBlock, uid } from "./blocks";
 import { loadPackage, savePackage } from "./lib/storage";
+import { usePackageState } from "./lib/history";
 import {
   isFsaSupported,
   readPackageFromHandle,
@@ -51,8 +52,17 @@ function renderSaveLabel(
 }
 
 export default function App() {
-  const [pkg, setPkg] = useState<Package>(loadPackage);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const {
+    pkg,
+    selectedId,
+    setSelectedId,
+    pushState,
+    resetHistory,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = usePackageState(loadPackage);
   const [toast, setToast] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
@@ -92,7 +102,7 @@ export default function App() {
       try {
         const loaded = await readPackageFromHandle(handle);
         if (cancelled) return;
-        setPkg(loaded);
+        resetHistory(loaded);
         setFileHandle(handle);
         setLastSavedAt(Date.now());
         setSaveStatus("saved");
@@ -181,9 +191,8 @@ export default function App() {
       }
       const loaded = await readPackageFromHandle(handle);
       await setSavedHandle(handle);
-      setPkg(loaded);
+      resetHistory(loaded);
       setFileHandle(handle);
-      setSelectedId(null);
       setLastSavedAt(Date.now());
       setSaveStatus("saved");
       showToast(`Opened ${handle.name}`);
@@ -221,69 +230,117 @@ export default function App() {
     }
   };
 
-  const updateBlock = (next: AnyBlock) => {
-    setPkg((p) => ({
-      ...p,
-      blocks: p.blocks.map((b) => (b.id === next.id ? next : b)),
-    }));
-  };
-  const deleteBlock = (id: string) => {
-    setPkg((p) => ({ ...p, blocks: p.blocks.filter((b) => b.id !== id) }));
-    if (selectedIdRef.current === id) setSelectedId(null);
-  };
-  const duplicateBlock = (id: string) => {
-    setPkg((p) => {
-      const idx = p.blocks.findIndex((b) => b.id === id);
-      if (idx < 0) return p;
-      const orig = p.blocks[idx];
-      const copy = {
-        ...orig,
-        id: uid(),
-        data: JSON.parse(JSON.stringify(orig.data)),
-      } as AnyBlock;
-      const blocks = p.blocks.slice();
-      blocks.splice(idx + 1, 0, copy);
-      setTimeout(() => setSelectedId(copy.id), 0);
-      return { ...p, blocks };
-    });
-  };
-  const moveBlock = (from: number, to: number) => {
-    setPkg((p) => {
-      const blocks = p.blocks.slice();
-      const [m] = blocks.splice(from, 1);
-      blocks.splice(to, 0, m);
-      return { ...p, blocks };
-    });
-  };
-  const addBlock = (type: BlockTypeKey) => {
-    const newB = makeBlock(type) as AnyBlock;
-    setPkg((p) => {
-      const idx = selectedIdRef.current
-        ? p.blocks.findIndex((b) => b.id === selectedIdRef.current)
-        : -1;
-      const blocks = p.blocks.slice();
-      if (idx >= 0) blocks.splice(idx + 1, 0, newB);
-      else blocks.push(newB);
-      return { ...p, blocks };
-    });
-    setSelectedId(newB.id);
-  };
-  const setTitle = (title: string) => setPkg((p) => ({ ...p, title }));
+  const updateBlock = useCallback((next: AnyBlock) => {
+    pushState(
+      (s) => ({
+        ...s,
+        pkg: {
+          ...s.pkg,
+          blocks: s.pkg.blocks.map((b) => (b.id === next.id ? next : b)),
+        },
+      }),
+      `edit-block-${next.id}`,
+      true // is continuous
+    );
+  }, [pushState]);
 
-  const newPackage = () => {
+  const deleteBlock = useCallback((id: string) => {
+    pushState(
+      (s) => ({
+        pkg: {
+          ...s.pkg,
+          blocks: s.pkg.blocks.filter((b) => b.id !== id),
+        },
+        selectedId: s.selectedId === id ? null : s.selectedId,
+      }),
+      `delete-block-${id}`,
+      false
+    );
+  }, [pushState]);
+
+  const duplicateBlock = useCallback((id: string) => {
+    pushState(
+      (s) => {
+        const idx = s.pkg.blocks.findIndex((b) => b.id === id);
+        if (idx < 0) return s;
+        const orig = s.pkg.blocks[idx];
+        const copy = {
+          ...orig,
+          id: uid(),
+          data: JSON.parse(JSON.stringify(orig.data)),
+        } as AnyBlock;
+        const blocks = s.pkg.blocks.slice();
+        blocks.splice(idx + 1, 0, copy);
+        return {
+          pkg: { ...s.pkg, blocks },
+          selectedId: copy.id,
+        };
+      },
+      `duplicate-block-${id}`,
+      false
+    );
+  }, [pushState]);
+
+  const moveBlock = useCallback((from: number, to: number) => {
+    pushState(
+      (s) => {
+        const blocks = s.pkg.blocks.slice();
+        const [m] = blocks.splice(from, 1);
+        blocks.splice(to, 0, m);
+        return {
+          ...s,
+          pkg: { ...s.pkg, blocks },
+        };
+      },
+      `move-block-${from}-${to}`,
+      false
+    );
+  }, [pushState]);
+
+  const addBlock = useCallback((type: BlockTypeKey) => {
+    const newB = makeBlock(type) as AnyBlock;
+    pushState(
+      (s) => {
+        const idx = s.selectedId
+          ? s.pkg.blocks.findIndex((b) => b.id === s.selectedId)
+          : -1;
+        const blocks = s.pkg.blocks.slice();
+        if (idx >= 0) blocks.splice(idx + 1, 0, newB);
+        else blocks.push(newB);
+        return {
+          pkg: { ...s.pkg, blocks },
+          selectedId: newB.id,
+        };
+      },
+      `add-block-${type}`,
+      false
+    );
+  }, [pushState]);
+
+  const setTitle = useCallback((title: string) => {
+    pushState(
+      (s) => ({
+        ...s,
+        pkg: { ...s.pkg, title },
+      }),
+      "edit-title",
+      true // is continuous
+    );
+  }, [pushState]);
+
+  const newPackage = useCallback(() => {
     if (
       !confirm(
         "Start a fresh package? Your current one will be replaced (export first if you want to keep it).",
       )
     )
       return;
-    setPkg({
+    resetHistory({
       title: "Untitled Package",
       pageNumbers: true,
       blocks: [makeBlock("cover") as AnyBlock],
     });
-    setSelectedId(null);
-  };
+  }, [resetHistory]);
 
   const loadFromFile = () => {
     const inp = document.createElement("input");
@@ -297,8 +354,7 @@ export default function App() {
         try {
           const parsed = JSON.parse(String(ev.target?.result)) as Package;
           if (parsed && parsed.blocks) {
-            setPkg(parsed);
-            setSelectedId(null);
+            resetHistory(parsed);
             showToast("Loaded package");
           }
         } catch (err) {
@@ -315,7 +371,27 @@ export default function App() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
+
+      // Intercept undo/redo globally (even inside inputs)
+      if (e.metaKey || e.ctrlKey) {
+        const keyLower = e.key.toLowerCase();
+        if (keyLower === "z") {
+          e.preventDefault();
+          if (e.shiftKey) {
+            redo();
+          } else {
+            undo();
+          }
+          return;
+        } else if (keyLower === "y") {
+          e.preventDefault();
+          redo();
+          return;
+        }
+      }
+
       if (t && t.matches && t.matches("input, textarea, select")) return;
+
       if ((e.metaKey || e.ctrlKey) && e.key === "p") {
         e.preventDefault();
         exportPDF();
@@ -329,7 +405,7 @@ export default function App() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [undo, redo]);
 
   return (
     <div
@@ -372,6 +448,23 @@ export default function App() {
           )}
         </div>
         <div className="actions">
+          <button
+            className="btn ghost tiny icon"
+            onClick={undo}
+            disabled={!canUndo}
+            title="Undo (⌘Z)"
+          >
+            <Icons.Undo size={14} />
+          </button>
+          <button
+            className="btn ghost tiny icon"
+            onClick={redo}
+            disabled={!canRedo}
+            title="Redo (⌘⇧Z)"
+          >
+            <Icons.Redo size={14} />
+          </button>
+          <div style={{ width: 1, height: 18, background: "var(--line)", margin: "0 4px" }} />
           <button className="btn ghost tiny" onClick={newPackage}>
             New
           </button>
@@ -407,7 +500,14 @@ export default function App() {
               type="checkbox"
               checked={!!pkg.pageNumbers}
               onChange={(e) =>
-                setPkg((p) => ({ ...p, pageNumbers: e.target.checked }))
+                pushState(
+                  (s) => ({
+                    ...s,
+                    pkg: { ...s.pkg, pageNumbers: e.target.checked },
+                  }),
+                  "toggle-page-numbers",
+                  false
+                )
               }
             />
             Page #s
