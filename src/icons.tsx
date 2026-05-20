@@ -69,4 +69,8 @@ export const Icons = {
       <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7" />
     </>
   ),
+  Minus: ic(<path d="M5 12h14" />),
+  Maximize: ic(
+    <path d="M4 9V5a1 1 0 0 1 1-1h4M20 9V5a1 1 0 0 0-1-1h-4M4 15v4a1 1 0 0 0 1 1h4M20 15v4a1 1 0 0 1-1 1h-4" />,
+  ),
 };

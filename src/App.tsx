@@ -66,6 +66,8 @@ export default function App() {
   const [toast, setToast] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const centerRef = useRef<HTMLElement | null>(null);
   const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
@@ -368,6 +370,20 @@ export default function App() {
 
   const selected = pkg.blocks.find((b) => b.id === selectedId) || null;
 
+  const ZOOM_MIN = 0.5;
+  const ZOOM_MAX = 2;
+  const clampZoom = (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+  const stepZoom = (delta: number) => setZoom((z) => clampZoom(Math.round((z + delta) * 100) / 100));
+  const resetZoom = useCallback(() => setZoom(1), []);
+  const fitWidth = useCallback(() => {
+    const el = centerRef.current;
+    if (!el) return;
+    // 8.5in paper + 0.85in left/right margins; .center has 24px horiz padding.
+    const paperPx = 8.5 * 96;
+    const available = el.clientWidth - 48;
+    setZoom(clampZoom(available / paperPx));
+  }, []);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
@@ -386,6 +402,18 @@ export default function App() {
         } else if (keyLower === "y") {
           e.preventDefault();
           redo();
+          return;
+        } else if (e.key === "=" || e.key === "+") {
+          e.preventDefault();
+          stepZoom(0.1);
+          return;
+        } else if (e.key === "-" || e.key === "_") {
+          e.preventDefault();
+          stepZoom(-0.1);
+          return;
+        } else if (e.key === "0") {
+          e.preventDefault();
+          resetZoom();
           return;
         }
       }
@@ -407,9 +435,25 @@ export default function App() {
     return () => window.removeEventListener("keydown", handler);
   }, [undo, redo]);
 
+  // Cmd/Ctrl + wheel zoom on the document area.
+  useEffect(() => {
+    const el = centerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      e.preventDefault();
+      // Trackpad pinch-zoom in Chrome sends ctrlKey + small deltaY values.
+      const delta = -e.deltaY * 0.0025;
+      setZoom((z) => clampZoom(Math.round((z + delta) * 100) / 100));
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
   return (
     <div
       className={`app${leftCollapsed ? " left-collapsed" : ""}${selected ? "" : " right-hidden"}`}
+      style={{ ["--zoom" as never]: zoom }}
     >
       <header className="topbar">
         <div className="brand">
@@ -603,7 +647,11 @@ export default function App() {
         <Icons.Chevron size={12} />
       </button>
 
-      <main className="center" onClick={() => setSelectedId(null)}>
+      <main
+        className="center"
+        ref={centerRef}
+        onClick={() => setSelectedId(null)}
+      >
         <div className="paper-stack">
           <DocumentPreview
             pkg={pkg}
@@ -613,6 +661,36 @@ export default function App() {
           />
         </div>
       </main>
+
+      <div className="zoom-bar" onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          onClick={() => stepZoom(-0.1)}
+          disabled={zoom <= ZOOM_MIN + 0.001}
+          title="Zoom out (⌘−)"
+        >
+          <Icons.Minus size={13} />
+        </button>
+        <div
+          className="level"
+          onClick={resetZoom}
+          title="Reset to 100% (⌘0)"
+        >
+          {Math.round(zoom * 100)}%
+        </div>
+        <button
+          type="button"
+          onClick={() => stepZoom(0.1)}
+          disabled={zoom >= ZOOM_MAX - 0.001}
+          title="Zoom in (⌘+)"
+        >
+          <Icons.Plus size={13} />
+        </button>
+        <div className="sep" />
+        <button type="button" onClick={fitWidth} title="Fit width">
+          <Icons.Maximize size={13} />
+        </button>
+      </div>
 
       <PropertiesPanel
         block={selected}
