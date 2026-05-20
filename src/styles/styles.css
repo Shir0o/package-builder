@@ -457,8 +457,8 @@ textarea { resize: vertical; }
   color: var(--muted);
 }
 .stanza-card.chorus .stanza-card-head { background: oklch(95% 0.03 80); }
-.stanza-card-head .seg { display: flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
-.stanza-card-head .seg button {
+.seg { display: flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.seg button {
   background: transparent;
   border: none;
   padding: 3px 7px;
@@ -468,7 +468,7 @@ textarea { resize: vertical; }
   color: var(--muted);
   font-family: var(--mono-font);
 }
-.stanza-card-head .seg button.on { background: var(--ink); color: var(--bg); }
+.seg button.on { background: var(--ink); color: var(--bg); }
 .stanza-card-head .actions { margin-left: auto; display: flex; gap: 2px; }
 .stanza-card-head .actions button {
   background: transparent;
