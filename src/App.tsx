@@ -15,6 +15,12 @@ import { BlockList } from "./components/BlockList";
 import { PropertiesPanel } from "./components/PropertiesPanel";
 import { DocumentPreview } from "./components/DocumentPreview";
 import { Icons } from "./icons";
+import {
+  getRoomFromHash,
+  makeRoomId,
+  makeShareUrl,
+  useCollabSync,
+} from "./lib/collab";
 import { exportPDF } from "./export/pdf";
 import { exportHTML } from "./export/html";
 import { exportMarkdown } from "./export/markdown";
@@ -62,11 +68,20 @@ export default function App() {
     setSelectedId,
     pushState,
     resetHistory,
+    replacePkg,
     undo,
     redo,
     canUndo,
     canRedo,
   } = usePackageState(loadPackage);
+  const [roomId, setRoomId] = useState<string | null>(() => getRoomFromHash());
+  const isCollab = roomId !== null;
+  useCollabSync(roomId, pkg, replacePkg);
+  useEffect(() => {
+    const onHash = () => setRoomId(getRoomFromHash());
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
   const [toast, setToast] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
@@ -129,7 +144,7 @@ export default function App() {
       return;
     }
     const t = setTimeout(() => {
-      savePackage(pkg);
+      if (!isCollab) savePackage(pkg);
       const handle = fileHandleRef.current;
       if (!handle) return;
       setSaveStatus("saving");
@@ -145,7 +160,7 @@ export default function App() {
         });
     }, 400);
     return () => clearTimeout(t);
-  }, [pkg, showToast]);
+  }, [pkg, showToast, isCollab]);
 
   // Tick the relative-time label once per minute so "saved 2m ago" updates.
   useEffect(() => {
@@ -215,6 +230,35 @@ export default function App() {
     setSaveStatus("idle");
     setLastSavedAt(null);
     showToast("Unlinked file");
+  };
+
+  const startShare = async () => {
+    const id = makeRoomId();
+    const url = makeShareUrl(id);
+    location.hash = `room=${id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast("Share link copied — anyone with it can edit");
+    } catch {
+      showToast(`Share link: ${url}`);
+    }
+  };
+
+  const copyShareLink = async () => {
+    if (!roomId) return;
+    const url = makeShareUrl(roomId);
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast("Share link copied");
+    } catch {
+      showToast(`Share link: ${url}`);
+    }
+  };
+
+  const leaveShare = () => {
+    history.replaceState(null, "", location.pathname + location.search);
+    setRoomId(null);
+    showToast("Left shared session");
   };
 
   const retrySave = async () => {
@@ -538,6 +582,20 @@ export default function App() {
             <button className="btn ghost tiny" onClick={unlinkFile}>
               Unlink
             </button>
+          )}
+          {!isCollab ? (
+            <button className="btn ghost tiny" onClick={startShare} title="Start a live shared session">
+              Share…
+            </button>
+          ) : (
+            <>
+              <button className="btn ghost tiny" onClick={copyShareLink} title="Copy shared session link">
+                Copy link
+              </button>
+              <button className="btn ghost tiny" onClick={leaveShare} title="Leave shared session">
+                Leave
+              </button>
+            </>
           )}
           <label
             style={{
