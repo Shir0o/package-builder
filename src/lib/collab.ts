@@ -121,7 +121,7 @@ function getOrCreateText(parent: Y.Map<unknown>, key: string, initial = ""): Y.T
   return t;
 }
 
-function syncYText(yt: Y.Text, next: string) {
+export function syncYText(yt: Y.Text, next: string) {
   const cur = yt.toString();
   if (cur === next) return;
   let s = 0;
@@ -268,22 +268,14 @@ function syncBlocks(blocksY: Y.Array<YBlock>, next: AnyBlock[]) {
     return;
   }
 
-  // Sequence changed — rebuild but reuse existing Y.Maps by id where possible
-  // so any in-flight text edits aren't lost.
-  const byId = new Map<string, YBlock>();
-  for (const yb of current) byId.set(yb.get("id") as string, yb);
-
+  // Sequence changed (block added, removed, or reordered). Yjs forbids
+  // re-integrating an already-integrated Y.Map, so we cannot literally
+  // reuse the existing YBlocks at new positions. Instead we rebuild from
+  // the snapshot `next` — which was produced from the React `pkg` state
+  // and therefore already includes any text the user just typed, so no
+  // user-visible content is lost.
   blocksY.delete(0, blocksY.length);
-
-  const fresh: YBlock[] = next.map((b) => {
-    const existing = byId.get(b.id);
-    if (existing) {
-      syncBlock(existing, b);
-      return existing;
-    }
-    return buildBlock(b);
-  });
-  blocksY.insert(0, fresh);
+  blocksY.insert(0, next.map(buildBlock));
 }
 
 function syncBlock(yb: YBlock, b: AnyBlock) {
