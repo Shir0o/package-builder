@@ -246,6 +246,35 @@ export function applyPackageToYDoc(root: YPackageRoot, pkg: Package) {
   syncBlocks(blocksY, pkg.blocks);
 }
 
+function getLCS(a: string[], b: string[]): Set<string> {
+  const m = a.length;
+  const n = b.length;
+  const dp = Array.from({ length: m + 1 }, () => new Int32Array(n + 1));
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (a[i - 1] === b[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+      }
+    }
+  }
+  const lcs = new Set<string>();
+  let i = m, j = n;
+  while (i > 0 && j > 0) {
+    if (a[i - 1] === b[j - 1]) {
+      lcs.add(a[i - 1]);
+      i--;
+      j--;
+    } else if (dp[i - 1][j] >= dp[i][j - 1]) {
+      i--;
+    } else {
+      j--;
+    }
+  }
+  return lcs;
+}
+
 function syncBlocks(blocksY: Y.Array<YBlock>, next: AnyBlock[]) {
   const current = blocksY.toArray();
   const curIds = current.map((b) => b.get("id") as string);
@@ -259,17 +288,38 @@ function syncBlocks(blocksY: Y.Array<YBlock>, next: AnyBlock[]) {
     return;
   }
 
-  // Sequence changed. Yjs doesn't support moving an attached Y.Map between
-  // positions (you can't re-insert one that's been deleted), so we rebuild
-  // from the input package. Known limitation: concurrent reorders are
-  // last-writer-wins at the array level — see follow-up to use a proper LCS
-  // diff. Text edits inside surviving blocks are preserved on the *other*
-  // peer because they receive the granular ops in the same transaction.
-  blocksY.delete(0, blocksY.length);
-  blocksY.insert(
-    0,
-    next.map((b) => buildBlock(b)),
-  );
+  const lcs = getLCS(curIds, nextIds);
+
+  let i = 0;
+  while (i < next.length || i < blocksY.length) {
+    if (i >= next.length) {
+      blocksY.delete(i, blocksY.length - i);
+      break;
+    }
+    if (i >= blocksY.length) {
+      const toInsert = next.slice(i).map((b) => buildBlock(b));
+      blocksY.insert(i, toInsert);
+      break;
+    }
+
+    const curBlock = blocksY.get(i);
+    const curId = curBlock.get("id") as string;
+    const nextBlock = next[i];
+    const nextId = nextBlock.id;
+
+    if (curId === nextId) {
+      syncBlock(curBlock, nextBlock);
+      i++;
+    } else {
+      if (!lcs.has(curId)) {
+        blocksY.delete(i, 1);
+      } else {
+        const newBlock = buildBlock(nextBlock);
+        blocksY.insert(i, [newBlock]);
+        i++;
+      }
+    }
+  }
 }
 
 function syncBlock(yb: YBlock, b: AnyBlock) {
@@ -386,23 +436,74 @@ function applyBlockData(
  * as plain values via setIfChanged. Length changes rebuild — rows have no
  * stable id so positional matching is the best we can do.
  */
+function stringifyYRow(yr: YRow, textKeys: string[], plainKeys: string[]): string {
+  const snapshot: Record<string, unknown> = {};
+  for (const k of textKeys) {
+    snapshot[k] = (yr.get(k) as Y.Text | undefined)?.toString() ?? "";
+  }
+  for (const k of plainKeys) {
+    snapshot[k] = yr.get(k);
+  }
+  return JSON.stringify(snapshot);
+}
+
+/**
+ * Sync an array of plain-object rows into a Y.Array of Y.Maps. `textKeys`
+ * are written as Y.Text (so per-char merge works). `plainKeys` are written
+ * as plain values via setIfChanged. Length changes or additions/deletions
+ * reconcile using LCS on stringified representations to preserve surviving rows.
+ */
 function syncRowArray(
   rowsY: Y.Array<YRow>,
   rows: Record<string, unknown>[],
   textKeys: string[],
   plainKeys: string[],
 ) {
-  if (rowsY.length !== rows.length) {
-    rowsY.delete(0, rowsY.length);
-    const fresh = rows.map((r) => buildRow(r, textKeys, plainKeys));
-    rowsY.insert(0, fresh);
-    return;
-  }
-  for (let i = 0; i < rows.length; i++) {
-    const yr = rowsY.get(i);
-    const r = rows[i];
-    for (const k of textKeys) syncYText(getOrCreateText(yr, k), r[k] as string);
-    for (const k of plainKeys) setIfChanged(yr, k, r[k]);
+  const curStr = rowsY.toArray().map((r) => stringifyYRow(r, textKeys, plainKeys));
+  const nextStr = rows.map((r) => {
+    const snapshot: Record<string, unknown> = {};
+    for (const k of textKeys) {
+      snapshot[k] = r[k] ?? "";
+    }
+    for (const k of plainKeys) {
+      snapshot[k] = r[k];
+    }
+    return JSON.stringify(snapshot);
+  });
+
+  const lcs = getLCS(curStr, nextStr);
+
+  let i = 0;
+  while (i < rows.length || i < rowsY.length) {
+    if (i >= rows.length) {
+      rowsY.delete(i, rowsY.length - i);
+      break;
+    }
+    if (i >= rowsY.length) {
+      const toInsert = rows.slice(i).map((r) => buildRow(r, textKeys, plainKeys));
+      rowsY.insert(i, toInsert);
+      break;
+    }
+
+    const curRow = rowsY.get(i);
+    const curValStr = stringifyYRow(curRow, textKeys, plainKeys);
+    const nextValStr = nextStr[i];
+
+    if (curValStr === nextValStr) {
+      // Content matches. Sync in-place.
+      const r = rows[i];
+      for (const k of textKeys) syncYText(getOrCreateText(curRow, k), r[k] as string);
+      for (const k of plainKeys) setIfChanged(curRow, k, r[k]);
+      i++;
+    } else {
+      if (!lcs.has(curValStr)) {
+        rowsY.delete(i, 1);
+      } else {
+        const newRow = buildRow(rows[i], textKeys, plainKeys);
+        rowsY.insert(i, [newRow]);
+        i++;
+      }
+    }
   }
 }
 

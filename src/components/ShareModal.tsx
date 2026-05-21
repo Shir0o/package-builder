@@ -73,8 +73,7 @@ export function ShareModal({
           </button>
         </div>
         <p className="modal-help">
-          Anyone with this link can edit live. Edits sync peer-to-peer — there
-          is no server copy.
+          Anyone with this link can edit live. Edits sync peer-to-peer (no server copy is saved, though connection metadata like Room IDs are visible to the public WebRTC signaling server).
         </p>
         <div className="modal-url-row">
           <input

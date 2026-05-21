@@ -236,8 +236,9 @@ export default function App() {
       firstSaveRef.current = false;
       return;
     }
+    if (isCollab) return;
     const t = setTimeout(() => {
-      if (!isCollab) savePackage(pkg);
+      savePackage(pkg);
       const handle = fileHandleRef.current;
       if (!handle) return;
       setSaveStatus("saving");

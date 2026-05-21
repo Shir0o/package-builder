@@ -30,11 +30,18 @@ export function BlockList({
   // same block — the second one just doesn't get a badge.
   const editorsByBlock = useMemo(() => {
     const m = new Map<string, Peer>();
+    const blockIds = new Set(pkg.blocks.map((b) => b.id));
     for (const p of peers) {
-      if (p.selectedBlockId && !m.has(p.selectedBlockId)) m.set(p.selectedBlockId, p);
+      if (
+        p.selectedBlockId &&
+        blockIds.has(p.selectedBlockId) &&
+        !m.has(p.selectedBlockId)
+      ) {
+        m.set(p.selectedBlockId, p);
+      }
     }
     return m;
-  }, [peers]);
+  }, [peers, pkg.blocks]);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [overIdx, setOverIdx] = useState<number | null>(null);
 
