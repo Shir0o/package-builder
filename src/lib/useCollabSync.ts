@@ -60,8 +60,10 @@ export function useCollabSync(
 ): CollabPresence {
   const onRemoteRef = useRef(onRemote);
   const pkgRef = useRef(pkg);
+  const selectedBlockIdRef = useRef(selectedBlockId);
   onRemoteRef.current = onRemote;
   pkgRef.current = pkg;
+  selectedBlockIdRef.current = selectedBlockId;
 
   const docRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<WebrtcProvider | null>(null);
@@ -103,10 +105,13 @@ export function useCollabSync(
     };
     root.observeDeep(onEvents);
 
-    // Awareness: publish identity + selection, subscribe to peers.
+    // Awareness: publish identity + selection in a single state so peers
+    // see our current selection on first announce (no null → id flicker).
     const awareness = provider.awareness;
-    awareness.setLocalStateField("user", localUser);
-    awareness.setLocalStateField("selectedBlockId", null);
+    awareness.setLocalState({
+      user: localUser,
+      selectedBlockId: selectedBlockIdRef.current,
+    });
 
     const recomputePeers = () => {
       const states = awareness.getStates() as Map<number, AwarenessState>;
