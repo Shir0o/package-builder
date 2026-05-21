@@ -236,7 +236,6 @@ export default function App() {
       firstSaveRef.current = false;
       return;
     }
-    if (isCollab) return;
     const t = setTimeout(() => {
       savePackage(pkg);
       const handle = fileHandleRef.current;
@@ -254,7 +253,7 @@ export default function App() {
         });
     }, 400);
     return () => clearTimeout(t);
-  }, [pkg, showToast, isCollab]);
+  }, [pkg, showToast]);
 
   // Tick the relative-time label once per minute so "saved 2m ago" updates.
   useEffect(() => {

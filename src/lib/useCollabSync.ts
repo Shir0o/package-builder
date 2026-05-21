@@ -303,9 +303,10 @@ export function useCollabSync(
       }
     }
 
-    // Skip writing to the YDoc if the current package is deep-equal to a recent remote snapshot.
-    // This prevents snapshot-replay loops and avoids polluting the UndoManager with remote edits.
-    if (recentRemoteSnapshotsRef.current.some((s) => deepEqual(pkg, s))) {
+    // Skip writing to the YDoc if the current package is one of the recent remote snapshots.
+    // We check reference equality (O(1)) because React updates state using the exact snapshot reference.
+    // This completely avoids the expensive deepEqual traversal on every local keystroke.
+    if (recentRemoteSnapshotsRef.current.includes(pkg)) {
       return;
     }
 

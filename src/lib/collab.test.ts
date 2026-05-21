@@ -896,7 +896,7 @@ describe("LCS reconciliation identity preservation", () => {
 
     const blocksY = root.get("blocks") as Y.Array<Y.Map<unknown>>;
     const sBlock = blocksY.get(0);
-    const rowsY = sBlock.get("data").get("rows") as Y.Array<Y.Map<unknown>>;
+    const rowsY = (sBlock.get("data") as Y.Map<unknown>).get("rows") as Y.Array<Y.Map<unknown>>;
 
     const aRowBefore = rowsY.get(0);
     const bRowBefore = rowsY.get(1);
