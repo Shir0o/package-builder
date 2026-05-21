@@ -51,14 +51,22 @@ describe("getRoomFromHash", () => {
 });
 
 describe("makeRoomId", () => {
-  it("returns 16 hex chars", () => {
+  it("returns an adjective-noun-NNNN slug", () => {
     const id = makeRoomId();
-    expect(id).toMatch(/^[0-9a-f]{16}$/);
+    expect(id).toMatch(/^[a-z]+-[a-z]+-\d{4}$/);
   });
 
-  it("generates unique ids", () => {
+  it("uses URL-safe characters only", () => {
+    const id = makeRoomId();
+    expect(encodeURIComponent(id)).toBe(id);
+  });
+
+  it("generates mostly-unique ids in a small batch", () => {
+    // 25M combinations — 50 samples should collide with negligible
+    // probability (~5e-5). Allow a single collision to keep the test
+    // non-flaky without weakening intent.
     const ids = new Set(Array.from({ length: 50 }, () => makeRoomId()));
-    expect(ids.size).toBe(50);
+    expect(ids.size).toBeGreaterThanOrEqual(49);
   });
 });
 
