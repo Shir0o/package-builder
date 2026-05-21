@@ -205,4 +205,16 @@ describe("prediction and incrementString", () => {
       expect(dataN.title).toBe("Notes");
     });
   });
+
+  describe("makeBlockWithPrediction", () => {
+    it("creates a block with predicted data and generated uid", () => {
+      const blocksBefore = [
+        { id: "1", type: "heading", data: { level: 2, text: "Message One", align: "left" } },
+      ] as any[];
+      const block = makeBlockWithPrediction("heading", blocksBefore);
+      expect(block.id).toMatch(/^b_[a-z0-9]+$/);
+      expect(block.type).toBe("heading");
+      expect((block.data as any).text).toBe("Message Two");
+    });
+  });
 });

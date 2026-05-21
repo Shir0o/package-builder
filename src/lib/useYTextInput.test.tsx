@@ -3,6 +3,7 @@ import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import * as Y from "yjs";
 import { useYTextInput } from "./useYTextInput";
+import { CollabContext, useYText } from "./collabContext";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -205,5 +206,60 @@ describe("useYTextInput — collab mode (with Y.Text)", () => {
     expect(yText.toString()).toBe("same");
     h.unmount();
   });
+});
 
+describe("CollabContext & useYText", () => {
+  it("returns null when CollabContext is null", () => {
+    let result: Y.Text | null = undefined as any;
+    function Test() {
+      result = useYText("some-id", ["text"]);
+      return null;
+    }
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    act(() => {
+      root.render(<Test />);
+    });
+    expect(result).toBeNull();
+    act(() => {
+      root.unmount();
+    });
+    container.remove();
+  });
+
+  it("returns Y.Text when CollabContext is provided", () => {
+    const doc = new Y.Doc();
+    const root = doc.getMap("pkg");
+    const blocksY = new Y.Array();
+    root.set("blocks", blocksY);
+
+    const blockMap = new Y.Map<unknown>();
+    blockMap.set("id", "block-1");
+    blockMap.set("type", "paragraph");
+    const dataMap = new Y.Map<unknown>();
+    dataMap.set("text", new Y.Text("hello"));
+    blockMap.set("data", dataMap);
+    blocksY.push([blockMap]);
+
+    let result: any = null;
+    function Test() {
+      result = useYText("block-1", ["text"]);
+      return null;
+    }
+    const container = document.createElement("div");
+    const rootEl = createRoot(container);
+    act(() => {
+      rootEl.render(
+        <CollabContext.Provider value={doc}>
+          <Test />
+        </CollabContext.Provider>
+      );
+    });
+    expect(result).not.toBeNull();
+    expect(result?.toString()).toBe("hello");
+    act(() => {
+      rootEl.unmount();
+    });
+    container.remove();
+  });
 });

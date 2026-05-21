@@ -230,4 +230,44 @@ describe("usePackageState hook", () => {
     });
     container.remove();
   });
+
+  it("replacePkg updates the package only when it actually changes", () => {
+    let hookRef: any = null;
+
+    function TestComponent() {
+      hookRef = usePackageState(initialPkg);
+      return null;
+    }
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    act(() => {
+      root.render(<TestComponent />);
+    });
+
+    const initialHookStatePkg = hookRef.pkg;
+    const samePkgRef = initialHookStatePkg;
+
+    // Call replacePkg with the exact same reference
+    act(() => {
+      hookRef.replacePkg(samePkgRef);
+    });
+    // The state object or pkg reference shouldn't change
+    expect(hookRef.pkg).toBe(initialHookStatePkg);
+
+    // Call replacePkg with a different package object
+    const newPkgObj = { ...initialPkg, title: "Replaced Title" };
+    act(() => {
+      hookRef.replacePkg(newPkgObj);
+    });
+    expect(hookRef.pkg).toEqual(newPkgObj);
+    expect(hookRef.pkg).not.toBe(initialHookStatePkg);
+
+    act(() => {
+      root.unmount();
+    });
+    container.remove();
+  });
 });
