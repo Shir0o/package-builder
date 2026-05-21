@@ -142,6 +142,12 @@ describe("prediction and incrementString", () => {
       expect(incrementString("Hello World")).toBe("Hello World");
       expect(incrementString("Message Twenty")).toBe("Message Twenty");
     });
+
+    it("is robust to trailing whitespace", () => {
+      expect(incrementString("Lesson 1 ")).toBe("Lesson 2 ");
+      expect(incrementString("Message One\n")).toBe("Message Two\n");
+      expect(incrementString("Page 09  ")).toBe("Page 10  ");
+    });
   });
 
   describe("predictBlockData", () => {

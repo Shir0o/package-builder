@@ -2,6 +2,7 @@ import React, { useEffect, useMemo } from "react";
 import type { AnyBlock, Package } from "../types";
 import { groupIntoPages } from "../lib/pagination";
 import { parseVerseLines } from "../lib/verses";
+import { DEFAULT_NOTES_LINES } from "../blocks";
 import type { Peer } from "../lib/collab";
 
 export function RenderBlock({ block }: { block: AnyBlock }) {
@@ -121,7 +122,7 @@ export function RenderBlock({ block }: { block: AnyBlock }) {
       return (
         <div>
           {d.title ? <div className="doc-notes-title">{d.title}</div> : null}
-          {Array.from({ length: d.lines || 28 }).map((_, i) => (
+          {Array.from({ length: d.lines || DEFAULT_NOTES_LINES }).map((_, i) => (
             <div key={i} className="doc-notes-line" />
           ))}
         </div>
