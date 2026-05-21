@@ -19,8 +19,8 @@ import {
   getRoomFromHash,
   makeRoomId,
   makeShareUrl,
-  useCollabSync,
 } from "./lib/collab";
+import { useCollabSync } from "./lib/useCollabSync";
 import { exportPDF } from "./export/pdf";
 import { exportHTML } from "./export/html";
 import { exportMarkdown } from "./export/markdown";

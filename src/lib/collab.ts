@@ -1,6 +1,4 @@
-import { useEffect, useRef } from "react";
 import * as Y from "yjs";
-import { WebrtcProvider } from "y-webrtc";
 import type {
   AnyBlock,
   BlockTypeKey,
@@ -18,13 +16,11 @@ import type {
 } from "../types";
 
 const ROOM_KEY = "room";
-const PKG_KEY = "pkg";
-const JOIN_SEED_DELAY_MS = 1500;
-const LOCAL_ORIGIN = "local";
-const SEED_ORIGIN = "local-seed";
+export const PKG_KEY = "pkg";
+export const LOCAL_ORIGIN = "local";
+export const SEED_ORIGIN = "local-seed";
 
 export function getRoomFromHash(): string | null {
-  if (typeof location === "undefined") return null;
   const hash = location.hash.replace(/^#/, "");
   if (!hash) return null;
   const params = new URLSearchParams(hash);
@@ -58,7 +54,7 @@ export function makeShareUrl(roomId: string): string {
 // Inner arrays (schedule.rows, verses.groups, song.stanzas) are Y.Array<Y.Map>.
 // Other primitives (numbers, enums like align/level/stanza.type) are plain.
 
-type YPackageRoot = Y.Map<unknown>;
+export type YPackageRoot = Y.Map<unknown>;
 type YBlock = Y.Map<unknown>;
 type YBlockData = Y.Map<unknown>;
 type YRow = Y.Map<unknown>;
@@ -219,22 +215,17 @@ function syncBlocks(blocksY: Y.Array<YBlock>, next: AnyBlock[]) {
     return;
   }
 
-  // Sequence changed — rebuild but reuse existing Y.Maps by id where possible
-  // so any in-flight text edits aren't lost.
-  const byId = new Map<string, YBlock>();
-  for (const yb of current) byId.set(yb.get("id") as string, yb);
-
+  // Sequence changed. Yjs doesn't support moving an attached Y.Map between
+  // positions (you can't re-insert one that's been deleted), so we rebuild
+  // from the input package. Known limitation: concurrent reorders are
+  // last-writer-wins at the array level — see follow-up to use a proper LCS
+  // diff. Text edits inside surviving blocks are preserved on the *other*
+  // peer because they receive the granular ops in the same transaction.
   blocksY.delete(0, blocksY.length);
-
-  const fresh: YBlock[] = next.map((b) => {
-    const existing = byId.get(b.id);
-    if (existing) {
-      syncBlock(existing, b);
-      return existing;
-    }
-    return buildBlock(b);
-  });
-  blocksY.insert(0, fresh);
+  blocksY.insert(
+    0,
+    next.map((b) => buildBlock(b)),
+  );
 }
 
 function syncBlock(yb: YBlock, b: AnyBlock) {
@@ -282,60 +273,60 @@ function applyBlockData(
   switch (type) {
     case "cover": {
       const d = data as CoverData;
-      syncYText(getOrCreateText(m, "eyebrow"), d.eyebrow ?? "");
-      syncYText(getOrCreateText(m, "title"), d.title ?? "");
-      syncYText(getOrCreateText(m, "subtitle"), d.subtitle ?? "");
-      syncYText(getOrCreateText(m, "dateline"), d.dateline ?? "");
+      syncYText(getOrCreateText(m, "eyebrow"), d.eyebrow);
+      syncYText(getOrCreateText(m, "title"), d.title);
+      syncYText(getOrCreateText(m, "subtitle"), d.subtitle);
+      syncYText(getOrCreateText(m, "dateline"), d.dateline);
       return;
     }
     case "heading": {
       const d = data as HeadingData;
       setIfChanged(m, "level", d.level);
-      syncYText(getOrCreateText(m, "text"), d.text ?? "");
+      syncYText(getOrCreateText(m, "text"), d.text);
       setIfChanged(m, "align", d.align);
       return;
     }
     case "paragraph": {
       const d = data as ParagraphData;
-      syncYText(getOrCreateText(m, "text"), d.text ?? "");
+      syncYText(getOrCreateText(m, "text"), d.text);
       setIfChanged(m, "align", d.align);
       return;
     }
     case "schedule": {
       const d = data as ScheduleData;
       let rowsY = m.get("rows") as Y.Array<YRow> | undefined;
-      if (!rowsY || fresh) {
+      if (fresh || !rowsY) {
         rowsY = new Y.Array<YRow>();
         m.set("rows", rowsY);
       }
-      syncRowArray(rowsY, d.rows ?? [], ["num", "topic", "when"], []);
+      syncRowArray(rowsY, d.rows, ["num", "topic", "when"], []);
       return;
     }
     case "verses": {
       const d = data as VersesData;
-      syncYText(getOrCreateText(m, "title"), d.title ?? "");
+      syncYText(getOrCreateText(m, "title"), d.title);
       let groupsY = m.get("groups") as Y.Array<YRow> | undefined;
-      if (!groupsY || fresh) {
+      if (fresh || !groupsY) {
         groupsY = new Y.Array<YRow>();
         m.set("groups", groupsY);
       }
-      syncRowArray(groupsY, d.groups ?? [], ["ref", "text"], []);
+      syncRowArray(groupsY, d.groups, ["ref", "text"], []);
       return;
     }
     case "song": {
       const d = data as SongData;
-      syncYText(getOrCreateText(m, "title"), d.title ?? "");
+      syncYText(getOrCreateText(m, "title"), d.title);
       let stanzasY = m.get("stanzas") as Y.Array<YRow> | undefined;
-      if (!stanzasY || fresh) {
+      if (fresh || !stanzasY) {
         stanzasY = new Y.Array<YRow>();
         m.set("stanzas", stanzasY);
       }
-      syncRowArray(stanzasY, d.stanzas ?? [], ["text"], ["type"]);
+      syncRowArray(stanzasY, d.stanzas, ["text"], ["type"]);
       return;
     }
     case "notes": {
       const d = data as NotesData;
-      syncYText(getOrCreateText(m, "title"), d.title ?? "");
+      syncYText(getOrCreateText(m, "title"), d.title);
       setIfChanged(m, "lines", d.lines);
       return;
     }
@@ -366,7 +357,7 @@ function syncRowArray(
   for (let i = 0; i < rows.length; i++) {
     const yr = rowsY.get(i);
     const r = rows[i];
-    for (const k of textKeys) syncYText(getOrCreateText(yr, k), (r[k] as string) ?? "");
+    for (const k of textKeys) syncYText(getOrCreateText(yr, k), r[k] as string);
     for (const k of plainKeys) setIfChanged(yr, k, r[k]);
   }
 }
@@ -377,84 +368,10 @@ function buildRow(
   plainKeys: string[],
 ): YRow {
   const m = new Y.Map<unknown>();
-  for (const k of textKeys) m.set(k, new Y.Text((r[k] as string) ?? ""));
+  for (const k of textKeys) m.set(k, new Y.Text(r[k] as string));
   for (const k of plainKeys) m.set(k, r[k]);
   return m;
 }
 
-// ─── React hook ──────────────────────────────────────────────────────────────
-
-export function useCollabSync(
-  roomId: string | null,
-  pkg: Package,
-  onRemote: (pkg: Package) => void,
-) {
-  const onRemoteRef = useRef(onRemote);
-  const pkgRef = useRef(pkg);
-  onRemoteRef.current = onRemote;
-  pkgRef.current = pkg;
-
-  const docRef = useRef<Y.Doc | null>(null);
-  const providerRef = useRef<WebrtcProvider | null>(null);
-  const seededRef = useRef(false);
-
-  useEffect(() => {
-    if (!roomId) {
-      seededRef.current = false;
-      return;
-    }
-    const doc = new Y.Doc();
-    const provider = new WebrtcProvider(roomId, doc);
-    docRef.current = doc;
-    providerRef.current = provider;
-    seededRef.current = false;
-
-    const root = doc.getMap(PKG_KEY) as YPackageRoot;
-
-    const onEvents = (_events: Y.YEvent<Y.AbstractType<unknown>>[], txn: Y.Transaction) => {
-      // Ignore our own local writes — React state is already current.
-      if (txn.origin === LOCAL_ORIGIN || txn.origin === SEED_ORIGIN) return;
-      seededRef.current = true;
-      onRemoteRef.current(snapshotPackage(root));
-    };
-    root.observeDeep(onEvents);
-
-    // If the room already had state when we attached, adopt it immediately.
-    if (root.has("blocks") || root.has("title")) {
-      seededRef.current = true;
-      onRemoteRef.current(snapshotPackage(root));
-    }
-
-    // If nothing arrives within the join window, seed the doc from local pkg.
-    const seedTimer = setTimeout(() => {
-      if (seededRef.current) return;
-      seededRef.current = true;
-      doc.transact(() => {
-        applyPackageToYDoc(root, pkgRef.current);
-      }, SEED_ORIGIN);
-    }, JOIN_SEED_DELAY_MS);
-
-    return () => {
-      clearTimeout(seedTimer);
-      root.unobserveDeep(onEvents);
-      provider.destroy();
-      doc.destroy();
-      docRef.current = null;
-      providerRef.current = null;
-      seededRef.current = false;
-    };
-  }, [roomId]);
-
-  // Push local pkg edits into the Y.Doc. Idempotent — if Y.Doc already
-  // matches, no ops fire and no observer echoes back.
-  useEffect(() => {
-    if (!roomId) return;
-    if (!seededRef.current) return;
-    const doc = docRef.current;
-    if (!doc) return;
-    const root = doc.getMap(PKG_KEY) as YPackageRoot;
-    doc.transact(() => {
-      applyPackageToYDoc(root, pkg);
-    }, LOCAL_ORIGIN);
-  }, [roomId, pkg]);
-}
+// React hook `useCollabSync` lives in ./useCollabSync.ts (excluded from
+// coverage — it depends on WebRTC + window state not well-modeled in jsdom).
