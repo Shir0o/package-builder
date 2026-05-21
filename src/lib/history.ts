@@ -23,6 +23,10 @@ export function usePackageState(initialPkg: Package | (() => Package)) {
   const canUndo = pastRef.current.length > 0;
   const canRedo = futureRef.current.length > 0;
 
+  const replacePkg = useCallback((newPkg: Package) => {
+    setState((s) => (s.pkg === newPkg ? s : { ...s, pkg: newPkg }));
+  }, []);
+
   const resetHistory = useCallback((newPkg: Package) => {
     setState({
       pkg: newPkg,
@@ -115,6 +119,7 @@ export function usePackageState(initialPkg: Package | (() => Package)) {
     setSelectedId,
     pushState,
     resetHistory,
+    replacePkg,
     undo,
     redo,
     canUndo,
