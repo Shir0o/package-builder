@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as Y from "yjs";
 import { WebrtcProvider } from "y-webrtc";
 import { IndexeddbPersistence } from "y-indexeddb";
@@ -17,6 +17,7 @@ import {
 } from "./collab";
 
 const JOIN_SEED_DELAY_MS = 1500;
+const UNDO_CAPTURE_TIMEOUT_MS = 500;
 
 type AwarenessState = {
   user?: LocalUser;
@@ -27,6 +28,10 @@ export type CollabPresence = {
   peers: Peer[];
   localUser: LocalUser;
   status: ConnectionStatus;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 };
 
 /**
@@ -67,6 +72,7 @@ export function useCollabSync(
 
   const docRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<WebrtcProvider | null>(null);
+  const undoManagerRef = useRef<Y.UndoManager | null>(null);
   const seededRef = useRef(false);
 
   // One identity per tab, generated lazily on the first render.
@@ -78,12 +84,16 @@ export function useCollabSync(
 
   const [peers, setPeers] = useState<Peer[]>([]);
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
+  const [undoState, setUndoState] = useState<{ canUndo: boolean; canRedo: boolean }>(
+    { canUndo: false, canRedo: false },
+  );
 
   useEffect(() => {
     if (!roomId) {
       seededRef.current = false;
       setPeers([]);
       setStatus("disconnected");
+      setUndoState({ canUndo: false, canRedo: false });
       return;
     }
     const doc = new Y.Doc();
@@ -94,6 +104,26 @@ export function useCollabSync(
     seededRef.current = false;
 
     const root = doc.getMap(PKG_KEY) as YPackageRoot;
+
+    // Track only this client's local writes; remote ops and seed ops are
+    // excluded so undo reverts your own edits without clobbering peers'.
+    // The root Y.Map scope cascades to nested Y.Texts and Y.Arrays.
+    // captureTimeout coalesces per-character keystrokes (each is its own
+    // Y.transact) into one undo step.
+    const undoManager = new Y.UndoManager(root, {
+      trackedOrigins: new Set([LOCAL_ORIGIN]),
+      captureTimeout: UNDO_CAPTURE_TIMEOUT_MS,
+    });
+    undoManagerRef.current = undoManager;
+    const refreshUndoState = () => {
+      setUndoState({
+        canUndo: undoManager.canUndo(),
+        canRedo: undoManager.canRedo(),
+      });
+    };
+    undoManager.on("stack-item-added", refreshUndoState);
+    undoManager.on("stack-item-popped", refreshUndoState);
+    undoManager.on("stack-cleared", refreshUndoState);
 
     const onEvents = (
       _events: Y.YEvent<Y.AbstractType<unknown>>[],
@@ -177,14 +207,20 @@ export function useCollabSync(
       awareness.off("change", onAwarenessChange);
       provider.off("status", onStatus);
       provider.off("peers", onAwarenessChange);
+      undoManager.off("stack-item-added", refreshUndoState);
+      undoManager.off("stack-item-popped", refreshUndoState);
+      undoManager.off("stack-cleared", refreshUndoState);
+      undoManager.destroy();
       provider.destroy();
       persistence.destroy();
       doc.destroy();
       docRef.current = null;
       providerRef.current = null;
+      undoManagerRef.current = null;
       seededRef.current = false;
       setPeers([]);
       setStatus("disconnected");
+      setUndoState({ canUndo: false, canRedo: false });
     };
   }, [roomId, localUser]);
 
@@ -207,5 +243,20 @@ export function useCollabSync(
     provider.awareness.setLocalStateField("selectedBlockId", selectedBlockId);
   }, [selectedBlockId, roomId]);
 
-  return { peers, localUser, status };
+  const undo = useCallback(() => {
+    undoManagerRef.current?.undo();
+  }, []);
+  const redo = useCallback(() => {
+    undoManagerRef.current?.redo();
+  }, []);
+
+  return {
+    peers,
+    localUser,
+    status,
+    undo,
+    redo,
+    canUndo: undoState.canUndo,
+    canRedo: undoState.canRedo,
+  };
 }

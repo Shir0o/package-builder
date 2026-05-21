@@ -6,7 +6,17 @@ export type AppState = {
   selectedId: string | null;
 };
 
-export function usePackageState(initialPkg: Package | (() => Package)) {
+export type CollabUndoBinding = {
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+};
+
+export function usePackageState(
+  initialPkg: Package | (() => Package),
+  collabUndo?: CollabUndoBinding | null,
+) {
   const [state, setState] = useState<AppState>(() => {
     const pkg = typeof initialPkg === "function" ? initialPkg() : initialPkg;
     return {
@@ -120,9 +130,9 @@ export function usePackageState(initialPkg: Package | (() => Package)) {
     pushState,
     resetHistory,
     replacePkg,
-    undo,
-    redo,
-    canUndo,
-    canRedo,
+    undo: collabUndo ? collabUndo.undo : undo,
+    redo: collabUndo ? collabUndo.redo : redo,
+    canUndo: collabUndo ? collabUndo.canUndo : canUndo,
+    canRedo: collabUndo ? collabUndo.canRedo : canRedo,
   };
 }
