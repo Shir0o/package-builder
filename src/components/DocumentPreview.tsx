@@ -149,11 +149,18 @@ export function DocumentPreview({ pkg, selectedId, onSelectBlock, interactive, p
   let pageNum = 0;
   const editorsByBlock = useMemo(() => {
     const m = new Map<string, Peer>();
+    const blockIds = new Set(pkg.blocks.map((b) => b.id));
     for (const p of peers ?? []) {
-      if (p.selectedBlockId && !m.has(p.selectedBlockId)) m.set(p.selectedBlockId, p);
+      if (
+        p.selectedBlockId &&
+        blockIds.has(p.selectedBlockId) &&
+        !m.has(p.selectedBlockId)
+      ) {
+        m.set(p.selectedBlockId, p);
+      }
     }
     return m;
-  }, [peers]);
+  }, [peers, pkg.blocks]);
   return (
     <>
       {pages.map((pageBlocks, pi) => {

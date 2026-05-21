@@ -831,3 +831,103 @@ describe("getYText", () => {
     expect(getYText(doc, "s1", ["rows", "abc", "topic"])).toBeNull();
   });
 });
+
+describe("LCS reconciliation identity preservation", () => {
+  it("preserves surviving block Y.Map instances when blocks are added/deleted", () => {
+    const { doc, root } = freshRoot();
+    const pkg: Package = {
+      title: "",
+      pageNumbers: true,
+      blocks: [
+        { id: "a", type: "paragraph", data: { text: "A", align: "left" } } as AnyBlock,
+        { id: "b", type: "paragraph", data: { text: "B", align: "left" } } as AnyBlock,
+        { id: "c", type: "paragraph", data: { text: "C", align: "left" } } as AnyBlock,
+      ],
+    };
+    doc.transact(() => applyPackageToYDoc(root, pkg), LOCAL_ORIGIN);
+
+    const blocksY = root.get("blocks") as Y.Array<Y.Map<unknown>>;
+    const aMapBefore = blocksY.get(0);
+    const bMapBefore = blocksY.get(1);
+    const cMapBefore = blocksY.get(2);
+
+    // Now, delete 'b' and add 'd' at the end. 'a' and 'c' should survive.
+    const updated: Package = {
+      title: "",
+      pageNumbers: true,
+      blocks: [
+        { id: "a", type: "paragraph", data: { text: "A", align: "left" } } as AnyBlock,
+        { id: "c", type: "paragraph", data: { text: "C", align: "left" } } as AnyBlock,
+        { id: "d", type: "paragraph", data: { text: "D", align: "left" } } as AnyBlock,
+      ],
+    };
+    doc.transact(() => applyPackageToYDoc(root, updated), LOCAL_ORIGIN);
+
+    // Verify blocksY has 3 blocks: a, c, d
+    expect(blocksY.length).toBe(3);
+    // Identity of a should be preserved
+    expect(blocksY.get(0)).toBe(aMapBefore);
+    // Identity of c should be preserved (now at index 1)
+    expect(blocksY.get(1)).toBe(cMapBefore);
+    // Identity of d is new
+    expect(blocksY.get(2)).not.toBe(bMapBefore);
+  });
+
+  it("preserves surviving schedule row Y.Map instances when rows are added/deleted", () => {
+    const { doc, root } = freshRoot();
+    const pkg: Package = {
+      title: "",
+      pageNumbers: true,
+      blocks: [
+        {
+          id: "s",
+          type: "schedule",
+          data: {
+            rows: [
+              { num: "1", topic: "A", when: "9am" },
+              { num: "2", topic: "B", when: "10am" },
+              { num: "3", topic: "C", when: "11am" },
+            ],
+          },
+        } as AnyBlock,
+      ],
+    };
+    doc.transact(() => applyPackageToYDoc(root, pkg), LOCAL_ORIGIN);
+
+    const blocksY = root.get("blocks") as Y.Array<Y.Map<unknown>>;
+    const sBlock = blocksY.get(0);
+    const rowsY = (sBlock.get("data") as Y.Map<unknown>).get("rows") as Y.Array<Y.Map<unknown>>;
+
+    const aRowBefore = rowsY.get(0);
+    const bRowBefore = rowsY.get(1);
+    const cRowBefore = rowsY.get(2);
+
+    // Update the package: delete row 'B', add row 'D' at the end. Row 'A' and 'C' should survive.
+    const updated: Package = {
+      title: "",
+      pageNumbers: true,
+      blocks: [
+        {
+          id: "s",
+          type: "schedule",
+          data: {
+            rows: [
+              { num: "1", topic: "A", when: "9am" },
+              { num: "3", topic: "C", when: "11am" },
+              { num: "4", topic: "D", when: "12pm" },
+            ],
+          },
+        } as AnyBlock,
+      ],
+    };
+    doc.transact(() => applyPackageToYDoc(root, updated), LOCAL_ORIGIN);
+
+    expect(rowsY.length).toBe(3);
+    // Row A preserved
+    expect(rowsY.get(0)).toBe(aRowBefore);
+    // Row C preserved (now at index 1)
+    expect(rowsY.get(1)).toBe(cRowBefore);
+    // Row D is new
+    expect(rowsY.get(2)).not.toBe(bRowBefore);
+  });
+});

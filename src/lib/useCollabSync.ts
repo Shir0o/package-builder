@@ -16,6 +16,25 @@ import {
   type YPackageRoot,
 } from "./collab";
 
+// ─── Deep Equal Helper ────────────────────────────────────────────────────────
+function deepEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a == null || b == null || typeof a !== "object" || typeof b !== "object") {
+    return false;
+  }
+  if (Array.isArray(a) !== Array.isArray(b)) {
+    return false;
+  }
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  for (const k of keysA) {
+    if (!keysB.includes(k)) return false;
+    if (!deepEqual((a as any)[k], (b as any)[k])) return false;
+  }
+  return true;
+}
+
 // How long to wait after joining for peer awareness packets before
 // concluding we're alone and should seed from local pkg. Awareness
 // packets are tiny and travel ahead of full doc state, but a too-short
@@ -83,6 +102,9 @@ export function useCollabSync(
   const undoManagerRef = useRef<Y.UndoManager | null>(null);
   const seededRef = useRef(false);
 
+  const initialPkgRef = useRef<Package>(pkg);
+  const recentRemoteSnapshotsRef = useRef<Package[]>([]);
+
   // One identity per tab, generated lazily on the first render.
   const localUserRef = useRef<LocalUser | null>(null);
   if (localUserRef.current === null) {
@@ -106,6 +128,8 @@ export function useCollabSync(
       setUndoState({ canUndo: false, canRedo: false });
       return;
     }
+    initialPkgRef.current = pkgRef.current;
+    recentRemoteSnapshotsRef.current = [];
     const doc = new Y.Doc();
     const provider = new WebrtcProvider(roomId, doc);
     const persistence = new IndexeddbPersistence(roomId, doc);
@@ -142,7 +166,12 @@ export function useCollabSync(
     ) => {
       if (txn.origin === LOCAL_ORIGIN || txn.origin === SEED_ORIGIN) return;
       seededRef.current = true;
-      onRemoteRef.current(snapshotPackage(root));
+      const snapshot = snapshotPackage(root);
+      recentRemoteSnapshotsRef.current.push(snapshot);
+      if (recentRemoteSnapshotsRef.current.length > 10) {
+        recentRemoteSnapshotsRef.current.shift();
+      }
+      onRemoteRef.current(snapshot);
     };
     root.observeDeep(onEvents);
 
@@ -203,6 +232,20 @@ export function useCollabSync(
         // their absence after the window is a reliable "I'm alone" signal.
         const peerCount = awareness.getStates().size - 1;
         if (peerCount > 0) return;
+
+        // LIMITATION (Two-Peer Seeding Fork):
+        // In a serverless WebRTC room, if two peers join an empty room simultaneously,
+        // both might see peerCount === 0 during this discovery window due to signaling
+        // latency. Consequently, both peers might independently seed the document from
+        // their own local package state. Since there is no central coordinating authority
+        // to serialize these initial writes, they will fork.
+        // Reconcilation: When they eventually connect, Yjs's CRDT merge semantics will
+        // combine their seeding transactions. However, if their packages had different
+        // contents, this merge can result in duplicate blocks or interleaved/merged text
+        // states. This is a known limitation of the serverless signaling architecture, but
+        // it is acceptable because standard workflows typically have one user create a
+        // room and share the link, meaning the second peer joins after the room is already
+        // seeded and active.
         seededRef.current = true;
         doc.transact(() => {
           applyPackageToYDoc(root, pkgRef.current);
@@ -244,10 +287,29 @@ export function useCollabSync(
 
   useEffect(() => {
     if (!roomId) return;
-    if (!seededRef.current) return;
     const doc = docRef.current;
     if (!doc) return;
     const root = doc.getMap(PKG_KEY) as YPackageRoot;
+
+    if (!seededRef.current) {
+      // If the current package is different from the initial package,
+      // it means the local user has made edits during the peer discovery window.
+      // We should immediately mark the doc as seeded and sync the local edits to the YDoc.
+      if (!deepEqual(pkg, initialPkgRef.current)) {
+        seededRef.current = true;
+      } else {
+        // Otherwise, wait for peer discovery/IndexedDB restore to finish seeding.
+        return;
+      }
+    }
+
+    // Skip writing to the YDoc if the current package is one of the recent remote snapshots.
+    // We check reference equality (O(1)) because React updates state using the exact snapshot reference.
+    // This completely avoids the expensive deepEqual traversal on every local keystroke.
+    if (recentRemoteSnapshotsRef.current.includes(pkg)) {
+      return;
+    }
+
     doc.transact(() => {
       applyPackageToYDoc(root, pkg);
     }, LOCAL_ORIGIN);
