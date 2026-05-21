@@ -27,7 +27,12 @@ import { exportHTML } from "./export/html";
 import { exportMarkdown } from "./export/markdown";
 import { exportText } from "./export/text";
 import { exportJSON } from "./export/json";
-import { PACKAGE_EXTENSION, PACKAGE_MIME, safeName } from "./export/util";
+import {
+  PACKAGE_ACCEPT_EXTENSIONS,
+  PACKAGE_EXTENSION,
+  PACKAGE_MIME,
+  safeName,
+} from "./export/util";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -189,7 +194,7 @@ export default function App() {
         types: [
           {
             description: "Package",
-            accept: { [PACKAGE_MIME]: [PACKAGE_EXTENSION, ".json"] },
+            accept: { [PACKAGE_MIME]: [...PACKAGE_ACCEPT_EXTENSIONS] },
           },
         ],
       });
@@ -213,7 +218,7 @@ export default function App() {
         types: [
           {
             description: "Package",
-            accept: { [PACKAGE_MIME]: [PACKAGE_EXTENSION, ".json"] },
+            accept: { [PACKAGE_MIME]: [...PACKAGE_ACCEPT_EXTENSIONS] },
           },
         ],
         multiple: false,
@@ -407,7 +412,7 @@ export default function App() {
   const loadFromFile = () => {
     const inp = document.createElement("input");
     inp.type = "file";
-    inp.accept = "application/json,.json";
+    inp.accept = [PACKAGE_MIME, ...PACKAGE_ACCEPT_EXTENSIONS].join(",");
     inp.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
