@@ -152,7 +152,7 @@ export function DocumentPreview({ pkg, selectedId, onSelectBlock, interactive, p
     if (interactive && selectedId) {
       const el = document.querySelector(`[data-block-id="${selectedId}"]`);
       if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        el.scrollIntoView({ behavior: "auto", block: "nearest" });
       }
     }
   }, [selectedId, interactive]);
