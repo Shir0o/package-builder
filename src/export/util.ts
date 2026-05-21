@@ -1,3 +1,10 @@
+export const PACKAGE_EXTENSION = ".pkg.json";
+export const PACKAGE_MIME = "application/json";
+// Extensions accepted by file pickers (and the <input accept="..."> fallback).
+// The compound `.pkg.json` is preferred; bare `.json` is accepted for files
+// saved without the compound extension.
+export const PACKAGE_ACCEPT_EXTENSIONS = [PACKAGE_EXTENSION, ".json"] as const;
+
 export function downloadBlob(filename: string, mime: string, content: string) {
   const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
