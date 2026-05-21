@@ -70,19 +70,25 @@ export default function App() {
     pushState,
     resetHistory,
     replacePkg,
-    undo,
-    redo,
-    canUndo,
-    canRedo,
+    undo: localUndo,
+    redo: localRedo,
+    canUndo: localCanUndo,
+    canRedo: localCanRedo,
   } = usePackageState(loadPackage);
   const [roomId, setRoomId] = useState<string | null>(() => getRoomFromHash());
   const isCollab = roomId !== null;
-  const { peers, status: collabStatus } = useCollabSync(
-    roomId,
-    pkg,
-    replacePkg,
-    selectedId,
-  );
+  const {
+    peers,
+    status: collabStatus,
+    undo: collabUndo,
+    redo: collabRedo,
+    canUndo: collabCanUndo,
+    canRedo: collabCanRedo,
+  } = useCollabSync(roomId, pkg, replacePkg, selectedId);
+  const undo = isCollab ? collabUndo : localUndo;
+  const redo = isCollab ? collabRedo : localRedo;
+  const canUndo = isCollab ? collabCanUndo : localCanUndo;
+  const canRedo = isCollab ? collabCanRedo : localCanRedo;
   useEffect(() => {
     const onHash = () => setRoomId(getRoomFromHash());
     window.addEventListener("hashchange", onHash);
