@@ -19,7 +19,11 @@ import type {
 
 const ROOM_KEY = "room";
 const PKG_KEY = "pkg";
-const JOIN_SEED_DELAY_MS = 1500;
+// How long we wait after joining to discover other peers via awareness
+// before deciding we're alone and should seed from local pkg. Much
+// shorter than waiting for state to sync — awareness packets are tiny
+// and travel ahead of doc state.
+const PEER_DISCOVERY_MS = 300;
 const LOCAL_ORIGIN = "local";
 const SEED_ORIGIN = "local-seed";
 
@@ -467,6 +471,11 @@ export function useCollabSync(
     };
     root.observeDeep(onEvents);
 
+    // Mark our local awareness so peers can see us. The flag lets us tell
+    // a real peer from a stale awareness entry; we don't actually inspect
+    // it on the read side, but it makes the handshake intent explicit.
+    provider.awareness.setLocalState({ seeding: false });
+
     const onAwareness = () => {
       // Subtract one for ourselves.
       const n = Math.max(0, provider.awareness.getStates().size - 1);
@@ -481,14 +490,19 @@ export function useCollabSync(
       onRemoteRef.current(snapshotPackage(root));
     }
 
-    // If nothing arrives within the join window, seed the doc from local pkg.
+    // Wait a short window for peer awareness packets. If any peer is
+    // present we defer seeding to them — they'll broadcast existing state
+    // (or be the seeder themselves). If we're the only one in the room
+    // after the window elapses, seed from our local pkg.
     const seedTimer = setTimeout(() => {
       if (seededRef.current) return;
+      const peers = provider.awareness.getStates().size - 1;
+      if (peers > 0) return; // let a peer broadcast
       seededRef.current = true;
       doc.transact(() => {
         applyPackageToYDoc(root, pkgRef.current);
       }, SEED_ORIGIN);
-    }, JOIN_SEED_DELAY_MS);
+    }, PEER_DISCOVERY_MS);
 
     return () => {
       clearTimeout(seedTimer);
