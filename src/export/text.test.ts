@@ -52,4 +52,16 @@ describe("exportText", () => {
     exportText(pkg);
     expect(captured.content).toContain("Package");
   });
+
+  it("handles empty heading text in plain text export", () => {
+    const pkg: Package = {
+      title: "Test",
+      pageNumbers: false,
+      blocks: [
+        { id: "h", type: "heading", data: { level: 2, text: "", align: "left" } } as any,
+      ],
+    };
+    exportText(pkg);
+    expect(captured.content).toBeDefined();
+  });
 });

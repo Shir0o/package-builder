@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { BLOCK_TYPES, BLOCK_ORDER_FOR_PICKER, makeBlock, uid } from "./blocks";
+import {
+  BLOCK_TYPES,
+  BLOCK_ORDER_FOR_PICKER,
+  makeBlock,
+  uid,
+  incrementString,
+  predictBlockData,
+  makeBlockWithPrediction,
+} from "./blocks";
 import type { BlockTypeKey } from "./types";
 
 const ALL_TYPES: BlockTypeKey[] = [
@@ -112,5 +120,101 @@ describe("BLOCK_ORDER_FOR_PICKER", () => {
         if (k !== null) expect(ALL_TYPES).toContain(k);
       }
     }
+  });
+});
+
+describe("prediction and incrementString", () => {
+  describe("incrementString", () => {
+    it("increments digits at the end of string", () => {
+      expect(incrementString("Lesson 1")).toBe("Lesson 2");
+      expect(incrementString("Message 9")).toBe("Message 10");
+      expect(incrementString("Page 09")).toBe("Page 10");
+      expect(incrementString("Chapter 001")).toBe("Chapter 002");
+    });
+
+    it("increments word numbers", () => {
+      expect(incrementString("Message One")).toBe("Message Two");
+      expect(incrementString("Lesson zero")).toBe("Lesson one");
+      expect(incrementString("CHAPTER ELEVEN")).toBe("CHAPTER TWELVE");
+    });
+
+    it("returns original string if it cannot be incremented", () => {
+      expect(incrementString("Hello World")).toBe("Hello World");
+      expect(incrementString("Message Twenty")).toBe("Message Twenty");
+    });
+
+    it("is robust to trailing whitespace", () => {
+      expect(incrementString("Lesson 1 ")).toBe("Lesson 2 ");
+      expect(incrementString("Message One\n")).toBe("Message Two\n");
+      expect(incrementString("Page 09  ")).toBe("Page 10  ");
+    });
+  });
+
+  describe("predictBlockData", () => {
+    it("prefills heading text based on previous heading", () => {
+      const blocksBefore = [
+        makeBlock("cover"),
+        { id: "1", type: "heading", data: { level: 2, text: "Message One", align: "left" } },
+        makeBlock("paragraph"),
+      ] as any[];
+
+      const data = predictBlockData("heading", blocksBefore);
+      expect(data).toEqual({
+        level: 2,
+        text: "Message Two",
+        align: "left",
+      });
+    });
+
+    it("prefills verses title based on previous verses", () => {
+      const blocksBefore = [
+        { id: "1", type: "verses", data: { title: "Lesson 1", groups: [] } },
+      ] as any[];
+
+      const data = predictBlockData("verses", blocksBefore);
+      expect(data.title).toBe("Lesson 2");
+    });
+
+    it("prefills notes title based on previous heading containing 'Message'", () => {
+      const blocksBefore = [
+        { id: "1", type: "heading", data: { level: 2, text: "Message One", align: "left" } },
+        makeBlock("paragraph"),
+      ] as any[];
+
+      const data = predictBlockData("notes", blocksBefore);
+      expect(data.title).toBe("Message One – Notes");
+    });
+
+    it("does not prefill notes title if previous heading does not contain 'Message'", () => {
+      const blocksBefore = [
+        { id: "1", type: "heading", data: { level: 2, text: "Introduction", align: "left" } },
+      ] as any[];
+
+      const data = predictBlockData("notes", blocksBefore);
+      expect(data.title).toBe("Notes");
+    });
+
+    it("returns default data when there are no preceding blocks of relevant types", () => {
+      const dataH = predictBlockData("heading", []);
+      expect(dataH.text).toBe("Heading");
+
+      const dataV = predictBlockData("verses", []);
+      expect(dataV.title).toBe("");
+
+      const dataN = predictBlockData("notes", []);
+      expect(dataN.title).toBe("Notes");
+    });
+  });
+
+  describe("makeBlockWithPrediction", () => {
+    it("creates a block with predicted data and generated uid", () => {
+      const blocksBefore = [
+        { id: "1", type: "heading", data: { level: 2, text: "Message One", align: "left" } },
+      ] as any[];
+      const block = makeBlockWithPrediction("heading", blocksBefore);
+      expect(block.id).toMatch(/^b_[a-z0-9]+$/);
+      expect(block.type).toBe("heading");
+      expect((block.data as any).text).toBe("Message Two");
+    });
   });
 });

@@ -930,4 +930,81 @@ describe("LCS reconciliation identity preservation", () => {
     // Row D is new
     expect(rowsY.get(2)).not.toBe(bRowBefore);
   });
+
+  it("handles deleting rows from the end and inserting rows in the middle in schedule row reconciliation", () => {
+    const { doc, root } = freshRoot();
+    const pkg: Package = {
+      title: "",
+      pageNumbers: true,
+      blocks: [
+        {
+          id: "s",
+          type: "schedule",
+          data: {
+            rows: [
+              { num: "1", topic: "A", when: "9am" },
+              { num: "2", topic: "B", when: "10am" },
+              { num: "3", topic: "C", when: "11am" },
+            ],
+          },
+        } as AnyBlock,
+      ],
+    };
+    doc.transact(() => applyPackageToYDoc(root, pkg), LOCAL_ORIGIN);
+
+    const blocksY = root.get("blocks") as Y.Array<Y.Map<unknown>>;
+    const sBlock = blocksY.get(0);
+    const rowsY = (sBlock.get("data") as Y.Map<unknown>).get("rows") as Y.Array<Y.Map<unknown>>;
+
+    const aRowBefore = rowsY.get(0);
+    const bRowBefore = rowsY.get(1);
+
+    // 1. Delete rows from the end: update rows to only have A and B. C should be deleted.
+    const updated1: Package = {
+      title: "",
+      pageNumbers: true,
+      blocks: [
+        {
+          id: "s",
+          type: "schedule",
+          data: {
+            rows: [
+              { num: "1", topic: "A", when: "9am" },
+              { num: "2", topic: "B", when: "10am" },
+            ],
+          },
+        } as AnyBlock,
+      ],
+    };
+    doc.transact(() => applyPackageToYDoc(root, updated1), LOCAL_ORIGIN);
+
+    expect(rowsY.length).toBe(2);
+    expect(rowsY.get(0)).toBe(aRowBefore);
+    expect(rowsY.get(1)).toBe(bRowBefore);
+
+    // 2. Insert row in the middle: update rows to have A, X, B.
+    const updated2: Package = {
+      title: "",
+      pageNumbers: true,
+      blocks: [
+        {
+          id: "s",
+          type: "schedule",
+          data: {
+            rows: [
+              { num: "1", topic: "A", when: "9am" },
+              { num: "99", topic: "X", when: "9:30am" },
+              { num: "2", topic: "B", when: "10am" },
+            ],
+          },
+        } as AnyBlock,
+      ],
+    };
+    doc.transact(() => applyPackageToYDoc(root, updated2), LOCAL_ORIGIN);
+
+    expect(rowsY.length).toBe(3);
+    expect(rowsY.get(0)).toBe(aRowBefore);
+    expect(rowsY.get(1).get("topic")?.toString()).toBe("X");
+    expect(rowsY.get(2)).toBe(bRowBefore);
+  });
 });

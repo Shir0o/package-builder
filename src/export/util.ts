@@ -28,8 +28,9 @@ export function safeName(s: string | undefined) {
 }
 
 export function escapeHtml(s: string) {
+  const map: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
   return String(s).replace(
     /[&<>"]/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] || c,
+    (c) => map[c],
   );
 }

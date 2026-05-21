@@ -128,6 +128,16 @@ describe("fileHandle", () => {
       });
       await expect(readPackageFromHandle(h)).rejects.toThrow(/Invalid package/);
     });
+    it("throws when blocks is not an array", async () => {
+      const h = makeHandle({
+        text: JSON.stringify({
+          title: "X",
+          pageNumbers: true,
+          blocks: "not-an-array",
+        }),
+      });
+      await expect(readPackageFromHandle(h)).rejects.toThrow(/Invalid package/);
+    });
     it("throws on null", async () => {
       const h = makeHandle({ text: "null" });
       await expect(readPackageFromHandle(h)).rejects.toThrow(/Invalid package/);

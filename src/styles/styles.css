@@ -809,7 +809,7 @@ textarea { resize: vertical; }
     page-break-after: always;
   }
   .paper:last-child { page-break-after: auto; }
-  .paper .pg-number { position: fixed; bottom: 0.4in; }
+  .paper .pg-number { position: absolute; bottom: 0.4in; }
 }
 @page { size: letter; margin: 0; }
 

@@ -78,4 +78,16 @@ describe("parseVerses & stringifyVerses", () => {
     const parsed = parseVerses(stringified);
     expect(parsed).toEqual(groups);
   });
+
+  it("covers reference matching with empty text content and multi-line without reference empty-text check", () => {
+    // 1. Reference matching with empty text content (match[2] is undefined/empty)
+    const text1 = "John 3:16";
+    const parsed1 = parseVerses(text1);
+    expect(parsed1).toEqual([{ ref: "John 3:16", text: "" }]);
+
+    // 2. Multi-line without reference starting with empty text on the last group
+    const text2 = "John 3:16\nIn the beginning";
+    const parsed2 = parseVerses(text2);
+    expect(parsed2).toEqual([{ ref: "John 3:16", text: "In the beginning" }]);
+  });
 });

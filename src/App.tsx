@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { AnyBlock, BlockTypeKey, Package } from "./types";
-import { makeBlock, uid } from "./blocks";
+import { makeBlock, uid, makeBlockWithPrediction } from "./blocks";
 import { loadPackage, savePackage } from "./lib/storage";
 import { usePackageState } from "./lib/history";
 import {
@@ -443,12 +443,15 @@ export default function App() {
   }, [pushState]);
 
   const addBlock = useCallback((type: BlockTypeKey) => {
-    const newB = makeBlock(type) as AnyBlock;
     pushState(
       (s) => {
         const idx = s.selectedId
           ? s.pkg.blocks.findIndex((b) => b.id === s.selectedId)
           : -1;
+        const insertIndex = idx >= 0 ? idx + 1 : s.pkg.blocks.length;
+        const blocksBefore = s.pkg.blocks.slice(0, insertIndex);
+        const newB = makeBlockWithPrediction(type, blocksBefore);
+
         const blocks = s.pkg.blocks.slice();
         if (idx >= 0) blocks.splice(idx + 1, 0, newB);
         else blocks.push(newB);
