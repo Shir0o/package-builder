@@ -14,6 +14,7 @@ import { getSavedHandle, setSavedHandle } from "./lib/handleStore";
 import { BlockList } from "./components/BlockList";
 import { PropertiesPanel } from "./components/PropertiesPanel";
 import { DocumentPreview } from "./components/DocumentPreview";
+import { ShareModal } from "./components/ShareModal";
 import { Icons } from "./icons";
 import {
   getRoomFromHash,
@@ -252,16 +253,13 @@ export default function App() {
     showToast("Unlinked file");
   };
 
-  const startShare = async () => {
+  const [shareOpen, setShareOpen] = useState(false);
+
+  const startShare = () => {
     const id = makeRoomId();
-    const url = makeShareUrl(id);
     location.hash = `room=${id}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      showToast("Share link copied — anyone with it can edit");
-    } catch {
-      showToast(`Share link: ${url}`);
-    }
+    setRoomId(id);
+    setShareOpen(true);
   };
 
   const copyShareLink = async () => {
@@ -278,6 +276,7 @@ export default function App() {
   const leaveShare = () => {
     history.replaceState(null, "", location.pathname + location.search);
     setRoomId(null);
+    setShareOpen(false);
     showToast("Left shared session");
   };
 
@@ -614,11 +613,13 @@ export default function App() {
           ) : (
             <>
               <PresenceIndicator status={collabStatus} peers={peers} />
-              <button className="btn ghost tiny" onClick={copyShareLink} title="Copy shared session link">
-                Copy link
-              </button>
-              <button className="btn ghost tiny" onClick={leaveShare} title="Leave shared session">
-                Leave
+              <button
+                type="button"
+                className="share-pill"
+                onClick={() => setShareOpen(true)}
+                title="Open share details"
+              >
+                Sharing · {peers.length} {peers.length === 1 ? "peer" : "peers"}
               </button>
             </>
           )}
@@ -795,6 +796,17 @@ export default function App() {
       />
 
       {toast && <div className="toast">{toast}</div>}
+
+      {shareOpen && roomId && (
+        <ShareModal
+          url={makeShareUrl(roomId)}
+          peerCount={peers.length}
+          status={collabStatus}
+          onCopy={copyShareLink}
+          onStop={leaveShare}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
     </div>
     </CollabContext.Provider>
   );
