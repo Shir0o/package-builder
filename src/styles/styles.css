@@ -805,6 +805,7 @@ textarea { resize: vertical; }
     margin: 0 !important;
     width: 100% !important;
     min-height: auto !important;
+    height: 11in !important;
     padding: 0.85in 0.85in 1in !important;
     page-break-after: always;
     overflow: hidden;
