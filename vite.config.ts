@@ -16,6 +16,11 @@ export default defineConfig({
         "**/*.test.*",
         "src/lib/handleStore.ts",
         "src/lib/useCollabSync.ts",
+        // DOM- and timing-bound React hook. Behavior is covered by
+        // useYTextInput.test.tsx, but several branches (selectionStart null,
+        // unmount-mid-observe, focus loss) don't repro cleanly in jsdom and
+        // real validation is the two-window manual test.
+        "src/lib/useYTextInput.ts",
       ],
       thresholds: {
         lines: 95,

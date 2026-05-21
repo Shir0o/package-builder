@@ -114,17 +114,16 @@ export function useYTextInput(
         ec--;
         en--;
       }
-      const apply = () => {
-        if (ec > s) yText.delete(s, ec - s);
-        if (en > s) yText.insert(s, next.slice(s, en));
-      };
-      const doc = yText.doc;
       // LOCAL_ORIGIN matches the bulk-apply effect's origin so the
       // useCollabSync observer treats this as a self-echo (no snapshot
       // re-render). UndoManager in useCollabSync tracks LOCAL_ORIGIN so
-      // undo of these edits keeps working.
-      if (doc) doc.transact(apply, LOCAL_ORIGIN);
-      else apply();
+      // undo of these edits keeps working. yText.doc is always non-null
+      // here because the only way to obtain a Y.Text is via getYText, which
+      // walks down from an attached doc.
+      yText.doc!.transact(() => {
+        if (ec > s) yText.delete(s, ec - s);
+        if (en > s) yText.insert(s, next.slice(s, en));
+      }, LOCAL_ORIGIN);
       // Also mirror into React state so the document preview re-renders
       // immediately. The follow-up [roomId, pkg] effect that syncs pkg into
       // the Y.Doc is idempotent (syncYText sees no diff and no-ops).

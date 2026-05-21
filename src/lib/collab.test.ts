@@ -4,6 +4,7 @@ import {
   generateIdentity,
   getOrCreateLocalUser,
   getRoomFromHash,
+  getYText,
   makeRoomId,
   makeShareUrl,
   snapshotPackage,
@@ -722,5 +723,103 @@ describe("presence: generateIdentity / getOrCreateLocalUser", () => {
     } finally {
       Storage.prototype.setItem = orig;
     }
+  });
+});
+
+describe("getYText", () => {
+  function seeded(): Y.Doc {
+    const pkg: Package = {
+      title: "Hello",
+      pageNumbers: true,
+      blocks: [
+        { id: "p1", type: "paragraph", data: { text: "hi", align: "left" } } as AnyBlock,
+        {
+          id: "s1",
+          type: "schedule",
+          data: { rows: [{ num: "1", topic: "Open", when: "9am" }] },
+        } as AnyBlock,
+        {
+          id: "song1",
+          type: "song",
+          data: { title: "Anthem", stanzas: [{ type: "verse", text: "line" }] },
+        } as AnyBlock,
+        {
+          id: "v1",
+          type: "verses",
+          data: { title: "Lesson", groups: [{ ref: "John 3:16", text: "For God…" }] },
+        } as AnyBlock,
+        { id: "h1", type: "heading", data: { text: "Hi", level: 1, align: "left" } } as AnyBlock,
+        { id: "rule1", type: "rule", data: {} } as AnyBlock,
+      ],
+    };
+    const { doc, root } = freshRoot();
+    applyPackageToYDoc(root, pkg);
+    return doc;
+  }
+
+  it("returns the root title Y.Text when blockId is null", () => {
+    const doc = seeded();
+    const t = getYText(doc, null, ["title"]);
+    expect(t?.toString()).toBe("Hello");
+  });
+
+  it("returns null for a non-text root key", () => {
+    const doc = seeded();
+    expect(getYText(doc, null, ["pageNumbers"])).toBeNull();
+  });
+
+  it("returns a block field by path", () => {
+    const doc = seeded();
+    expect(getYText(doc, "p1", ["text"])?.toString()).toBe("hi");
+    expect(getYText(doc, "h1", ["text"])?.toString()).toBe("Hi");
+  });
+
+  it("returns a row Y.Text via numeric index", () => {
+    const doc = seeded();
+    expect(getYText(doc, "s1", ["rows", 0, "topic"])?.toString()).toBe("Open");
+    expect(getYText(doc, "song1", ["stanzas", 0, "text"])?.toString()).toBe("line");
+    expect(getYText(doc, "v1", ["groups", 0, "ref"])?.toString()).toBe("John 3:16");
+  });
+
+  it("accepts numeric path segments as strings", () => {
+    const doc = seeded();
+    expect(getYText(doc, "s1", ["rows", "0", "when"])?.toString()).toBe("9am");
+  });
+
+  it("returns null when blocks haven't been seeded", () => {
+    const { doc } = freshRoot();
+    expect(getYText(doc, "p1", ["text"])).toBeNull();
+  });
+
+  it("returns null for an unknown block id", () => {
+    const doc = seeded();
+    expect(getYText(doc, "nope", ["text"])).toBeNull();
+  });
+
+  it("returns null when the block has no data map (rule/pagebreak)", () => {
+    const doc = seeded();
+    // rule blocks have an empty data map — looking up a missing key is null.
+    expect(getYText(doc, "rule1", ["text"])).toBeNull();
+  });
+
+  it("returns null when a path segment is missing", () => {
+    const doc = seeded();
+    expect(getYText(doc, "p1", ["nope"])).toBeNull();
+  });
+
+  it("returns null for an out-of-range row index", () => {
+    const doc = seeded();
+    expect(getYText(doc, "s1", ["rows", 99, "topic"])).toBeNull();
+  });
+
+  it("returns null when a path segment hits a non-container leaf", () => {
+    const doc = seeded();
+    // heading.level is a plain number — descending into it should fail.
+    expect(getYText(doc, "h1", ["level", "x"])).toBeNull();
+  });
+
+  it("returns null when a numeric index is NaN", () => {
+    const doc = seeded();
+    expect(getYText(doc, "s1", ["rows", "abc", "topic"])).toBeNull();
   });
 });
