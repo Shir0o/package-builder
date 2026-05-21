@@ -37,60 +37,62 @@ export function useYTextInput(
     elRef.current = el;
   }, []);
 
-  // Sync the DOM element with the source of truth. In collab mode the Y.Text
-  // observer also adjusts the caret through the event delta so concurrent
-  // remote edits don't yank the cursor to the end of the field.
+  // Collab mode: subscribe to the Y.Text once per yText instance and update
+  // the DOM element imperatively from the observer. Kept separate from the
+  // fallback sync below so we don't tear down + recreate the observer on
+  // every keystroke (each keystroke updates `fallback` via setFallback).
   useLayoutEffect(() => {
     const el = elRef.current;
-    if (!el) return;
+    if (!el || !yText) return;
 
-    if (yText) {
-      const truth = yText.toString();
-      if (el.value !== truth) el.value = truth;
+    const truth = yText.toString();
+    if (el.value !== truth) el.value = truth;
 
-      const onYChange = (event: Y.YTextEvent) => {
-        const node = elRef.current;
-        if (!node) return;
-        const next = yText.toString();
-        if (node.value === next) return;
+    const onYChange = (event: Y.YTextEvent) => {
+      const node = elRef.current;
+      if (!node) return;
+      const next = yText.toString();
+      if (node.value === next) return;
 
-        const start = node.selectionStart ?? next.length;
-        const end = node.selectionEnd ?? next.length;
-        let s = start;
-        let f = end;
-        let pos = 0;
-        for (const op of event.delta) {
-          if (op.retain != null) {
-            pos += op.retain;
-          } else if (typeof op.insert === "string") {
-            const len = op.insert.length;
-            if (pos <= s) s += len;
-            if (pos <= f) f += len;
-            pos += len;
-          } else if (op.delete != null) {
-            const d = op.delete;
-            if (pos < s) s -= Math.min(d, s - pos);
-            if (pos < f) f -= Math.min(d, f - pos);
-          }
+      const start = node.selectionStart ?? next.length;
+      const end = node.selectionEnd ?? next.length;
+      let s = start;
+      let f = end;
+      let pos = 0;
+      for (const op of event.delta) {
+        if (op.retain != null) {
+          pos += op.retain;
+        } else if (typeof op.insert === "string") {
+          const len = op.insert.length;
+          if (pos <= s) s += len;
+          if (pos <= f) f += len;
+          pos += len;
+        } else if (op.delete != null) {
+          const d = op.delete;
+          if (pos < s) s -= Math.min(d, s - pos);
+          if (pos < f) f -= Math.min(d, f - pos);
         }
-        const focused =
-          typeof document !== "undefined" && document.activeElement === node;
-        node.value = next;
-        if (focused) {
-          try {
-            node.setSelectionRange(Math.max(0, s), Math.max(0, f));
-          } catch {
-            // Some input types (e.g. number) reject setSelectionRange — ignore.
-          }
+      }
+      const focused =
+        typeof document !== "undefined" && document.activeElement === node;
+      node.value = next;
+      if (focused) {
+        try {
+          node.setSelectionRange(Math.max(0, s), Math.max(0, f));
+        } catch {
+          // Some input types (e.g. number) reject setSelectionRange — ignore.
         }
-      };
-      yText.observe(onYChange);
-      return () => yText.unobserve(onYChange);
-    }
+      }
+    };
+    yText.observe(onYChange);
+    return () => yText.unobserve(onYChange);
+  }, [yText]);
 
-    // Solo mode: keep the uncontrolled element synced with React state.
+  // Solo mode: keep the uncontrolled element synced with React state.
+  useLayoutEffect(() => {
+    const el = elRef.current;
+    if (!el || yText) return;
     if (el.value !== fallback) el.value = fallback;
-    return;
   }, [yText, fallback]);
 
   const onChange = useCallback(
