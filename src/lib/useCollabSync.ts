@@ -49,6 +49,45 @@ function deepPackageEqual(a: unknown, b: unknown): boolean {
 const PEER_DISCOVERY_MS = 1000;
 const UNDO_CAPTURE_TIMEOUT_MS = 500;
 
+function getSignalingServers(): string[] {
+  if (typeof window !== "undefined") {
+    // 1. Query parameter override (hash-based or search-based)
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    let queryServers = hashParams.get("signaling");
+    if (!queryServers) {
+      const searchParams = new URLSearchParams(window.location.search);
+      queryServers = searchParams.get("signaling");
+    }
+    if (queryServers) {
+      return queryServers.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+
+    // 2. localStorage override
+    try {
+      const localServers = localStorage.getItem("collab-signaling-servers");
+      if (localServers) {
+        return localServers.split(",").map((s) => s.trim()).filter(Boolean);
+      }
+    } catch {
+      // Ignore localStorage access errors
+    }
+  }
+
+  // 3. Build-time environment variable override
+  const envServers = (import.meta as any).env?.VITE_SIGNALING_SERVERS;
+  if (envServers) {
+    return envServers.split(",").map((s: string) => s.trim()).filter(Boolean);
+  }
+
+  // 4. Default fallbacks
+  return [
+    "ws://localhost:4444",
+    "wss://signaling.yjs.dev",
+    "wss://y-webrtc-signaling-us.herokuapp.com",
+    "wss://y-webrtc-signaling-eu.herokuapp.com",
+  ];
+}
+
 type AwarenessState = {
   user?: LocalUser;
   selectedBlockId?: string | null;
@@ -135,7 +174,9 @@ export function useCollabSync(
     initialPkgRef.current = pkgRef.current;
     recentRemoteSnapshotsRef.current = [];
     const doc = new Y.Doc();
-    const provider = new WebrtcProvider(roomId, doc);
+    const provider = new WebrtcProvider(roomId, doc, {
+      signaling: getSignalingServers()
+    });
     const persistence = new IndexeddbPersistence(roomId, doc);
     docRef.current = doc;
     providerRef.current = provider;

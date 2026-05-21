@@ -7,3 +7,5 @@ tsconfig.tsbuildinfo
 *.tsbuildinfo
 coverage
 .claude
+.firebase
+

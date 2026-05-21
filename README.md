@@ -13,14 +13,21 @@ npm test         # vitest
 npm run build    # production build to dist/
 ```
 
-## Deploy
+## Collaboration & Deployment
 
-The build output in `dist/` is a static site. Drop it on any static host (Cloudflare Pages, Netlify, GitHub Pages, etc.).
+This application supports real-time, peer-to-peer collaboration using WebRTC. While editing data is synced directly between browsers, an initial handshake requires a lightweight signaling server.
 
-**Cloudflare Pages**
-- Build command: `npm run build`
-- Output directory: `dist`
-- No environment variables required.
+For detailed steps on deploying the static frontend, hosting your own signaling server, and using environment/runtime overrides, see the [Deployment & Self-Hosting Guide](DEPLOY.md).
+
+### Quick Start: Local Signaling Server
+If public signaling servers are down or blocked by your browser, you can run your own local signaling server for testing:
+```bash
+PORT=4444 node ./node_modules/y-webrtc/bin/server.js
+```
+
+### Production Deployments
+* **Frontend**: Build the static assets via `npm run build` and host the `dist/` folder on Cloudflare Pages, Netlify, GitHub Pages, or Vercel.
+* **Signaling Server**: Run the provided `Dockerfile` on any container platform (Render, Fly.io, Railway).
 
 ## License
 
