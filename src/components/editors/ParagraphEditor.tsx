@@ -1,17 +1,22 @@
 import type { ParagraphData } from "../../types";
+import { useYText } from "../../lib/useCollabSync";
+import { useYTextInput } from "../../lib/useYTextInput";
 
-type Props = { data: ParagraphData; set: (patch: Partial<ParagraphData>) => void };
+type Props = {
+  blockId: string;
+  data: ParagraphData;
+  set: (patch: Partial<ParagraphData>) => void;
+};
 
-export function ParagraphEditor({ data, set }: Props) {
+export function ParagraphEditor({ blockId, data, set }: Props) {
+  const textY = useYText(blockId, ["text"]);
+  const text = useYTextInput(textY, data.text, (v) => set({ text: v }));
+
   return (
     <>
       <div className="field">
         <label>Text</label>
-        <textarea
-          value={data.text}
-          onChange={(e) => set({ text: e.target.value })}
-          placeholder="Body text…"
-        />
+        <textarea ref={text.ref} onChange={text.onChange} placeholder="Body text…" />
       </div>
       <div className="field">
         <label>Align</label>

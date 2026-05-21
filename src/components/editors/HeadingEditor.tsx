@@ -1,17 +1,22 @@
 import type { HeadingData } from "../../types";
+import { useYText } from "../../lib/useCollabSync";
+import { useYTextInput } from "../../lib/useYTextInput";
 
-type Props = { data: HeadingData; set: (patch: Partial<HeadingData>) => void };
+type Props = {
+  blockId: string;
+  data: HeadingData;
+  set: (patch: Partial<HeadingData>) => void;
+};
 
-export function HeadingEditor({ data, set }: Props) {
+export function HeadingEditor({ blockId, data, set }: Props) {
+  const textY = useYText(blockId, ["text"]);
+  const text = useYTextInput(textY, data.text, (v) => set({ text: v }));
+
   return (
     <>
       <div className="field">
         <label>Text</label>
-        <input
-          type="text"
-          value={data.text}
-          onChange={(e) => set({ text: e.target.value })}
-        />
+        <input type="text" ref={text.ref} onChange={text.onChange} />
       </div>
       <div className="row-fields">
         <div className="field">

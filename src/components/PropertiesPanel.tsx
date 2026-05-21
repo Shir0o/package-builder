@@ -68,13 +68,13 @@ export function PropertiesPanel({ block, onChange, onDelete, onDuplicate }: Prop
         <span className="type-pill">{block.type}</span>
       </div>
       <div className="panel-body">
-        {block.type === "cover" && <CoverEditor data={block.data} set={set} />}
-        {block.type === "heading" && <HeadingEditor data={block.data} set={set} />}
-        {block.type === "paragraph" && <ParagraphEditor data={block.data} set={set} />}
-        {block.type === "schedule" && <ScheduleEditor data={block.data} set={set} />}
-        {block.type === "verses" && <VersesEditor data={block.data} set={set} />}
-        {block.type === "song" && <SongEditor data={block.data} set={set} />}
-        {block.type === "notes" && <NotesEditor data={block.data} set={set} />}
+        {block.type === "cover" && <CoverEditor blockId={block.id} data={block.data} set={set} />}
+        {block.type === "heading" && <HeadingEditor blockId={block.id} data={block.data} set={set} />}
+        {block.type === "paragraph" && <ParagraphEditor blockId={block.id} data={block.data} set={set} />}
+        {block.type === "schedule" && <ScheduleEditor blockId={block.id} data={block.data} set={set} />}
+        {block.type === "verses" && <VersesEditor blockId={block.id} data={block.data} set={set} />}
+        {block.type === "song" && <SongEditor blockId={block.id} data={block.data} set={set} />}
+        {block.type === "notes" && <NotesEditor blockId={block.id} data={block.data} set={set} />}
         {(block.type === "rule" || block.type === "pagebreak") && (
           <div style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.5 }}>
             No options — this block has no content.

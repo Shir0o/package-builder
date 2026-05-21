@@ -1,9 +1,50 @@
 import type { ScheduleData, ScheduleRow } from "../../types";
 import { Icons } from "../../icons";
+import { useYText } from "../../lib/useCollabSync";
+import { useYTextInput } from "../../lib/useYTextInput";
 
-type Props = { data: ScheduleData; set: (patch: Partial<ScheduleData>) => void };
+type Props = {
+  blockId: string;
+  data: ScheduleData;
+  set: (patch: Partial<ScheduleData>) => void;
+};
 
-export function ScheduleEditor({ data, set }: Props) {
+type RowProps = {
+  blockId: string;
+  index: number;
+  row: ScheduleRow;
+  onUpdate: (patch: Partial<ScheduleRow>) => void;
+  onDelete: () => void;
+};
+
+function ScheduleRowEditor({ blockId, index, row, onUpdate, onDelete }: RowProps) {
+  const numY = useYText(blockId, ["rows", index, "num"]);
+  const topicY = useYText(blockId, ["rows", index, "topic"]);
+  const whenY = useYText(blockId, ["rows", index, "when"]);
+
+  const num = useYTextInput(numY, row.num, (v) => onUpdate({ num: v }));
+  const topic = useYTextInput(topicY, row.topic, (v) => onUpdate({ topic: v }));
+  const when = useYTextInput(whenY, row.when, (v) => onUpdate({ when: v }));
+
+  return (
+    <div className="sched-row">
+      <input type="text" ref={num.ref} onChange={num.onChange} placeholder="#" />
+      <textarea
+        rows={2}
+        style={{ minHeight: 38, fontFamily: "var(--ui-font)", fontSize: 12 }}
+        ref={topic.ref}
+        onChange={topic.onChange}
+        placeholder="Topic — newlines allowed"
+      />
+      <input type="text" ref={when.ref} onChange={when.onChange} placeholder="When" />
+      <button className="x" onClick={onDelete} title="Remove row">
+        <Icons.Trash size={12} />
+      </button>
+    </div>
+  );
+}
+
+export function ScheduleEditor({ blockId, data, set }: Props) {
   const update = (i: number, patch: Partial<ScheduleRow>) => {
     const rows = data.rows.slice();
     rows[i] = { ...rows[i], ...patch };
@@ -18,30 +59,14 @@ export function ScheduleEditor({ data, set }: Props) {
       <label>Rows</label>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {data.rows.map((r, i) => (
-          <div className="sched-row" key={i}>
-            <input
-              type="text"
-              value={r.num}
-              onChange={(e) => update(i, { num: e.target.value })}
-              placeholder="#"
-            />
-            <textarea
-              rows={2}
-              style={{ minHeight: 38, fontFamily: "var(--ui-font)", fontSize: 12 }}
-              value={r.topic}
-              onChange={(e) => update(i, { topic: e.target.value })}
-              placeholder="Topic — newlines allowed"
-            />
-            <input
-              type="text"
-              value={r.when}
-              onChange={(e) => update(i, { when: e.target.value })}
-              placeholder="When"
-            />
-            <button className="x" onClick={() => del(i)} title="Remove row">
-              <Icons.Trash size={12} />
-            </button>
-          </div>
+          <ScheduleRowEditor
+            key={i}
+            blockId={blockId}
+            index={i}
+            row={r}
+            onUpdate={(patch) => update(i, patch)}
+            onDelete={() => del(i)}
+          />
         ))}
       </div>
       <button
