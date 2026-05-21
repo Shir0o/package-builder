@@ -38,7 +38,11 @@ export function useYText(
   return getYText(doc, blockId, path);
 }
 
-const JOIN_SEED_DELAY_MS = 1500;
+// How long to wait after joining for peer awareness packets before
+// concluding we're alone and should seed from local pkg. Awareness is
+// tiny and travels ahead of doc state, so a short window is enough — a
+// huge improvement on a fixed 1.5s timer that races against slow peers.
+const PEER_DISCOVERY_MS = 300;
 const UNDO_CAPTURE_TIMEOUT_MS = 500;
 
 type AwarenessState = {
@@ -212,11 +216,17 @@ export function useCollabSync(
       }
       seedTimer = setTimeout(() => {
         if (seededRef.current) return;
+        // If any peer has announced presence by now, defer to them — they
+        // will broadcast the existing doc state and our observer will pick
+        // it up. Awareness packets are small and arrive ahead of state, so
+        // their absence after the window is a reliable "I'm alone" signal.
+        const peerCount = awareness.getStates().size - 1;
+        if (peerCount > 0) return;
         seededRef.current = true;
         doc.transact(() => {
           applyPackageToYDoc(root, pkgRef.current);
         }, SEED_ORIGIN);
-      }, JOIN_SEED_DELAY_MS);
+      }, PEER_DISCOVERY_MS);
     };
 
     persistence.whenSynced.then(startSeedFlow).catch((err) => {
