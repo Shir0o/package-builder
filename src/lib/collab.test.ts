@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import * as Y from "yjs";
 import {
+  generateIdentity,
+  getOrCreateLocalUser,
   getRoomFromHash,
   makeRoomId,
   makeShareUrl,
@@ -669,5 +671,56 @@ describe("snapshotPackage handles missing/partial Y.Doc state", () => {
       blocksY.push([bad]);
     });
     expect(snapshotPackage(root).blocks).toEqual([]);
+  });
+});
+
+describe("presence: generateIdentity / getOrCreateLocalUser", () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+  });
+
+  it("generateIdentity returns a non-empty name and a parseable hsl(...) color", () => {
+    const id = generateIdentity();
+    expect(id.name.trim().length).toBeGreaterThan(0);
+    expect(id.name.split(/\s+/).length).toBeGreaterThanOrEqual(2);
+    expect(id.color).toMatch(/^hsl\(\d{1,3} 70% 45%\)$/);
+  });
+
+  it("getOrCreateLocalUser persists across calls within the session", () => {
+    const a = getOrCreateLocalUser();
+    const b = getOrCreateLocalUser();
+    expect(b).toEqual(a);
+    const raw = sessionStorage.getItem("collab-identity");
+    expect(raw).not.toBeNull();
+    expect(JSON.parse(raw as string)).toEqual(a);
+  });
+
+  it("getOrCreateLocalUser regenerates if stored value is malformed", () => {
+    sessionStorage.setItem("collab-identity", "{not json");
+    const u = getOrCreateLocalUser();
+    expect(typeof u.name).toBe("string");
+    expect(typeof u.color).toBe("string");
+  });
+
+  it("getOrCreateLocalUser regenerates if stored value has wrong shape", () => {
+    sessionStorage.setItem("collab-identity", JSON.stringify({ name: 1, color: 2 }));
+    const u = getOrCreateLocalUser();
+    expect(typeof u.name).toBe("string");
+    expect(typeof u.color).toBe("string");
+  });
+
+  it("getOrCreateLocalUser returns a fresh identity when sessionStorage.setItem throws", () => {
+    const orig = Storage.prototype.setItem;
+    Storage.prototype.setItem = () => {
+      throw new Error("quota");
+    };
+    try {
+      sessionStorage.clear();
+      const u = getOrCreateLocalUser();
+      expect(typeof u.name).toBe("string");
+      expect(u.color).toMatch(/^hsl\(/);
+    } finally {
+      Storage.prototype.setItem = orig;
+    }
   });
 });
