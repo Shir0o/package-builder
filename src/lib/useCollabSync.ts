@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as Y from "yjs";
 import { WebrtcProvider } from "y-webrtc";
 import { IndexeddbPersistence } from "y-indexeddb";
@@ -9,7 +9,6 @@ import {
   SEED_ORIGIN,
   applyPackageToYDoc,
   getOrCreateLocalUser,
-  getYText,
   snapshotPackage,
   type ConnectionStatus,
   type LocalUser,
@@ -17,28 +16,14 @@ import {
   type YPackageRoot,
 } from "./collab";
 
-/**
- * Provides the live Y.Doc (or null in solo mode) so deeply-nested editors can
- * subscribe to specific Y.Text fields without prop-drilling through every
- * block component. The value is null when there's no active room.
- */
-export const CollabContext = createContext<Y.Doc | null>(null);
-
-/**
- * Look up the Y.Text at (blockId, path) from the CollabContext. Returns null
- * when there's no doc (solo mode) or when the path doesn't resolve — the
- * caller should treat null as "use the controlled fallback."
- */
-export function useYText(
-  blockId: string | null,
-  path: ReadonlyArray<string | number>,
-): Y.Text | null {
-  const doc = useContext(CollabContext);
-  if (!doc) return null;
-  return getYText(doc, blockId, path);
-}
-
-const JOIN_SEED_DELAY_MS = 1500;
+// How long to wait after joining for peer awareness packets before
+// concluding we're alone and should seed from local pkg. Awareness
+// packets are tiny and travel ahead of full doc state, but a too-short
+// window risks racing against WebRTC signaling on slower / public
+// signaling servers — so we keep a 1s margin. Still strictly better
+// than the old fixed 1.5s timer because we now *gate on awareness*
+// rather than seeding unconditionally at the deadline.
+const PEER_DISCOVERY_MS = 1000;
 const UNDO_CAPTURE_TIMEOUT_MS = 500;
 
 type AwarenessState = {
@@ -212,11 +197,17 @@ export function useCollabSync(
       }
       seedTimer = setTimeout(() => {
         if (seededRef.current) return;
+        // If any peer has announced presence by now, defer to them — they
+        // will broadcast the existing doc state and our observer will pick
+        // it up. Awareness packets are small and arrive ahead of state, so
+        // their absence after the window is a reliable "I'm alone" signal.
+        const peerCount = awareness.getStates().size - 1;
+        if (peerCount > 0) return;
         seededRef.current = true;
         doc.transact(() => {
           applyPackageToYDoc(root, pkgRef.current);
         }, SEED_ORIGIN);
-      }, JOIN_SEED_DELAY_MS);
+      }, PEER_DISCOVERY_MS);
     };
 
     persistence.whenSynced.then(startSeedFlow).catch((err) => {
@@ -277,14 +268,21 @@ export function useCollabSync(
     undoManagerRef.current?.redo();
   }, []);
 
-  return {
-    doc,
-    peers,
-    localUser,
-    status,
-    undo,
-    redo,
-    canUndo: undoState.canUndo,
-    canRedo: undoState.canRedo,
-  };
+  // Memoize so the returned object identity is stable when none of the
+  // underlying values changed. Callers that pass this object into a
+  // useEffect dep would otherwise re-fire on every render and (in the
+  // lazy-load bridge in App.tsx) loop forever.
+  return useMemo<CollabPresence>(
+    () => ({
+      doc,
+      peers,
+      localUser,
+      status,
+      undo,
+      redo,
+      canUndo: undoState.canUndo,
+      canRedo: undoState.canRedo,
+    }),
+    [doc, peers, localUser, status, undo, redo, undoState.canUndo, undoState.canRedo],
+  );
 }
