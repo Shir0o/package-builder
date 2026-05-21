@@ -16,8 +16,12 @@ import {
   type YPackageRoot,
 } from "./collab";
 
-// ─── Deep Equal Helper ────────────────────────────────────────────────────────
-function deepEqual(a: unknown, b: unknown): boolean {
+// ─── Deep Package Equal Helper ────────────────────────────────────────────────
+/**
+ * Compares two Package objects (or their plain-JSON components) deeply.
+ * Scoped to plain JSON structures; does not support Dates, Maps, Sets, or functions.
+ */
+function deepPackageEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (a == null || b == null || typeof a !== "object" || typeof b !== "object") {
     return false;
@@ -30,7 +34,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
   if (keysA.length !== keysB.length) return false;
   for (const k of keysA) {
     if (!keysB.includes(k)) return false;
-    if (!deepEqual((a as any)[k], (b as any)[k])) return false;
+    if (!deepPackageEqual((a as any)[k], (b as any)[k])) return false;
   }
   return true;
 }
@@ -295,7 +299,7 @@ export function useCollabSync(
       // If the current package is different from the initial package,
       // it means the local user has made edits during the peer discovery window.
       // We should immediately mark the doc as seeded and sync the local edits to the YDoc.
-      if (!deepEqual(pkg, initialPkgRef.current)) {
+      if (!deepPackageEqual(pkg, initialPkgRef.current)) {
         seededRef.current = true;
       } else {
         // Otherwise, wait for peer discovery/IndexedDB restore to finish seeding.

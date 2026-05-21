@@ -241,6 +241,10 @@ export default function App() {
       const handle = fileHandleRef.current;
       if (!handle) return;
       setSaveStatus("saving");
+      // Note (File-Handle Collab Race):
+      // If multiple collaborators have the same local file linked via the File System Access API,
+      // they will race on writing to it (last-write-wins). This is acceptable for personal-file
+      // synchronization, but collaborators should be aware of this behavior.
       writePackageToHandle(handle, pkg)
         .then(() => {
           setLastSavedAt(Date.now());

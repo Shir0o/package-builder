@@ -23,6 +23,9 @@ export function usePackageState(initialPkg: Package | (() => Package)) {
   const canUndo = pastRef.current.length > 0;
   const canRedo = futureRef.current.length > 0;
 
+  // Note: replacePkg must preserve the snapshot reference (i.e., return the exact same state
+  // object if s.pkg === newPkg) for useCollabSync's recent-snapshot reference-equality guard
+  // to function correctly.
   const replacePkg = useCallback((newPkg: Package) => {
     setState((s) => (s.pkg === newPkg ? s : { ...s, pkg: newPkg }));
   }, []);

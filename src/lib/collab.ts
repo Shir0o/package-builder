@@ -246,6 +246,13 @@ export function applyPackageToYDoc(root: YPackageRoot, pkg: Package) {
   syncBlocks(blocksY, pkg.blocks);
 }
 
+/**
+ * Computes the Longest Common Subsequence (LCS) of two string arrays.
+ *
+ * Scaling note: This is O(n·m) in both time and space, allocating an Int32Array
+ * per call. This is fine for tens of blocks/rows, but would become a performance
+ * bottleneck at hundreds of elements.
+ */
 function getLCS(a: string[], b: string[]): Set<string> {
   const m = a.length;
   const n = b.length;
@@ -452,6 +459,12 @@ function stringifyYRow(yr: YRow, textKeys: string[], plainKeys: string[]): strin
  * are written as Y.Text (so per-char merge works). `plainKeys` are written
  * as plain values via setIfChanged. Length changes or additions/deletions
  * reconcile using LCS on stringified representations to preserve surviving rows.
+ *
+ * Limitation (Row LCS Content Hashing):
+ * Since rows do not have stable IDs, row matching relies on content hashes (stringified representations).
+ * If a row is concurrently reordered and its content is modified on both sides, the row will fall
+ * out of the LCS match. Yjs will delete and re-insert the row, losing its Y.Text identity
+ * and preventing concurrent character merging. Same applies in a minor way to blocks.
  */
 function syncRowArray(
   rowsY: Y.Array<YRow>,

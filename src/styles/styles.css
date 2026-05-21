@@ -1022,6 +1022,16 @@ textarea { resize: vertical; }
   margin: 0 0 12px;
   line-height: 1.45;
 }
+.modal-warning {
+  font-size: 11.5px;
+  background: var(--bg-2);
+  border-left: 3px solid var(--accent);
+  color: var(--ink-2);
+  padding: 8px 10px;
+  border-radius: 4px;
+  margin: 0 0 14px;
+  line-height: 1.45;
+}
 .modal-url-row {
   display: flex;
   gap: 6px;

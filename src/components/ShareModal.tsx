@@ -75,6 +75,9 @@ export function ShareModal({
         <p className="modal-help">
           Anyone with this link can edit live. Edits sync peer-to-peer (no server copy is saved, though connection metadata like Room IDs are visible to the public WebRTC signaling server).
         </p>
+        <div className="modal-warning">
+          <strong>Tip:</strong> If starting with an empty room, let the first person open the link and wait a brief moment for it to load before others join to avoid document forking or duplicate blocks.
+        </div>
         <div className="modal-url-row">
           <input
             ref={inputRef}
