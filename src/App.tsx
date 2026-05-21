@@ -20,8 +20,8 @@ import {
   getRoomFromHash,
   makeRoomId,
   makeShareUrl,
-  useCollabSync,
-} from "./lib/collab";
+} from "./lib/collabUrl";
+import type * as CollabModule from "./lib/collab";
 import { exportPDF } from "./export/pdf";
 import { exportHTML } from "./export/html";
 import { exportMarkdown } from "./export/markdown";
@@ -30,6 +30,49 @@ import { exportJSON } from "./export/json";
 import { safeName } from "./export/util";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
+
+type CollabMod = typeof CollabModule;
+
+/** Dynamically load src/lib/collab.ts (and its Yjs + y-webrtc deps) only
+ *  when the user enters a room. Returns null while loading or when not
+ *  in a room. The collab chunk ends up split out of the main bundle. */
+function useCollabModule(roomId: string | null): CollabMod | null {
+  const [mod, setMod] = useState<CollabMod | null>(null);
+  useEffect(() => {
+    if (!roomId) {
+      setMod(null);
+      return;
+    }
+    let cancelled = false;
+    import("./lib/collab").then((m) => {
+      if (!cancelled) setMod(m);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [roomId]);
+  return mod;
+}
+
+/** Bridge component that calls into the loaded collab module's hook.
+ *  Rendered only when both the module and roomId are present, so the
+ *  hook can be invoked unconditionally inside it. */
+function CollabBridge({
+  module,
+  roomId,
+  pkg,
+  onRemote,
+  onPeers,
+}: {
+  module: CollabMod;
+  roomId: string;
+  pkg: Package;
+  onRemote: (pkg: Package) => void;
+  onPeers: (count: number) => void;
+}) {
+  module.useCollabSync(roomId, pkg, onRemote, onPeers);
+  return null;
+}
 
 declare global {
   interface Window {
@@ -79,7 +122,7 @@ export default function App() {
   const isCollab = roomId !== null;
   const [peerCount, setPeerCount] = useState(0);
   const [shareOpen, setShareOpen] = useState(false);
-  useCollabSync(roomId, pkg, replacePkg, setPeerCount);
+  const collabModule = useCollabModule(roomId);
   useEffect(() => {
     const onHash = () => setRoomId(getRoomFromHash());
     window.addEventListener("hashchange", onHash);
@@ -257,6 +300,7 @@ export default function App() {
     history.replaceState(null, "", location.pathname + location.search);
     setRoomId(null);
     setShareOpen(false);
+    setPeerCount(0);
     showToast("Left shared session");
   };
 
@@ -767,6 +811,16 @@ export default function App() {
       />
 
       {toast && <div className="toast">{toast}</div>}
+
+      {collabModule && roomId && (
+        <CollabBridge
+          module={collabModule}
+          roomId={roomId}
+          pkg={pkg}
+          onRemote={replacePkg}
+          onPeers={setPeerCount}
+        />
+      )}
 
       {shareOpen && roomId && (
         <ShareModal
