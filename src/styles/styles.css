@@ -635,7 +635,7 @@ textarea { resize: vertical; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 9.3in;
+  min-height: 9in;
   text-align: center;
   gap: 14pt;
 }
@@ -739,7 +739,7 @@ textarea { resize: vertical; }
 }
 .doc-notes-line {
   border-bottom: 0.5pt solid #c8c2b6;
-  height: 22pt;
+  height: 20pt;
 }
 
 /* Song rendering — the killer feature */
@@ -805,8 +805,10 @@ textarea { resize: vertical; }
     margin: 0 !important;
     width: 100% !important;
     min-height: auto !important;
+    height: 11in !important;
     padding: 0.85in 0.85in 1in !important;
     page-break-after: always;
+    overflow: hidden;
   }
   .paper:last-child { page-break-after: auto; }
   .paper .pg-number { position: absolute; bottom: 0.4in; }
