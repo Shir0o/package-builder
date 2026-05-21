@@ -121,7 +121,7 @@ export function RenderBlock({ block }: { block: AnyBlock }) {
       return (
         <div>
           {d.title ? <div className="doc-notes-title">{d.title}</div> : null}
-          {Array.from({ length: d.lines || 10 }).map((_, i) => (
+          {Array.from({ length: d.lines || 28 }).map((_, i) => (
             <div key={i} className="doc-notes-line" />
           ))}
         </div>

@@ -54,7 +54,7 @@ export const BLOCK_TYPES: Registry = {
   notes: {
     label: "Notes",
     desc: "Lined writing space",
-    create: () => ({ title: "Notes", lines: 10 }),
+    create: () => ({ title: "Notes", lines: 28 }),
     summary: (d) => `${d.title || "Notes"} · ${d.lines} lines`,
   },
   rule: {
@@ -80,10 +80,123 @@ export const BLOCK_ORDER_FOR_PICKER: (BlockTypeKey | null)[][] = [
   ["pagebreak", null],
 ];
 
+export function incrementString(val: string): string {
+  const digitMatch = val.match(/^(.*?)(\d+)$/);
+  if (digitMatch) {
+    const prefix = digitMatch[1];
+    const numStr = digitMatch[2];
+    const nextNum = parseInt(numStr, 10) + 1;
+    const paddedNum = String(nextNum).padStart(numStr.length, "0");
+    return prefix + paddedNum;
+  }
+
+  const wordMatch = val.match(/^(.*?\b)([a-zA-Z]+)$/);
+  if (wordMatch) {
+    const prefix = wordMatch[1];
+    const word = wordMatch[2];
+    const lowerWord = word.toLowerCase();
+    const numberWords = [
+      "zero",
+      "one",
+      "two",
+      "three",
+      "four",
+      "five",
+      "six",
+      "seven",
+      "eight",
+      "nine",
+      "ten",
+      "eleven",
+      "twelve",
+      "thirteen",
+      "fourteen",
+      "fifteen",
+      "sixteen",
+      "seventeen",
+      "eighteen",
+      "nineteen",
+      "twenty",
+    ];
+    const idx = numberWords.indexOf(lowerWord);
+    if (idx !== -1 && idx < numberWords.length - 1) {
+      const nextWordLower = numberWords[idx + 1];
+      let nextWord = nextWordLower;
+      if (word === word.toUpperCase()) {
+        nextWord = nextWordLower.toUpperCase();
+      } else if (word[0] === word[0].toUpperCase()) {
+        nextWord = nextWordLower.charAt(0).toUpperCase() + nextWordLower.slice(1);
+      }
+      return prefix + nextWord;
+    }
+  }
+
+  return val;
+}
+
 export function uid(): string {
   return "b_" + Math.random().toString(36).slice(2, 9);
 }
 
 export function makeBlock(type: BlockTypeKey): AnyBlock {
   return { id: uid(), type, data: BLOCK_TYPES[type].create() } as AnyBlock;
+}
+
+export function predictBlockData<K extends BlockTypeKey>(type: K, blocksBefore: AnyBlock[]): BlockDataByType[K] {
+  const defaultData = BLOCK_TYPES[type].create();
+  if (type === "heading") {
+    let prevText = "";
+    for (let i = blocksBefore.length - 1; i >= 0; i--) {
+      const b = blocksBefore[i];
+      if (b.type === "heading") {
+        prevText = b.data.text || "";
+        break;
+      }
+    }
+    if (prevText) {
+      return {
+        ...defaultData,
+        text: incrementString(prevText),
+      } as any;
+    }
+  } else if (type === "verses") {
+    let prevTitle = "";
+    for (let i = blocksBefore.length - 1; i >= 0; i--) {
+      const b = blocksBefore[i];
+      if (b.type === "verses") {
+        prevTitle = b.data.title || "";
+        break;
+      }
+    }
+    if (prevTitle) {
+      return {
+        ...defaultData,
+        title: incrementString(prevTitle),
+      } as any;
+    }
+  } else if (type === "notes") {
+    let prevHeadingText = "";
+    for (let i = blocksBefore.length - 1; i >= 0; i--) {
+      const b = blocksBefore[i];
+      if (b.type === "heading") {
+        prevHeadingText = b.data.text || "";
+        break;
+      }
+    }
+    if (prevHeadingText && /message/i.test(prevHeadingText)) {
+      return {
+        ...defaultData,
+        title: `${prevHeadingText} – Notes`,
+      } as any;
+    }
+  }
+  return defaultData as any;
+}
+
+export function makeBlockWithPrediction(type: BlockTypeKey, blocksBefore: AnyBlock[]): AnyBlock {
+  return {
+    id: uid(),
+    type,
+    data: predictBlockData(type, blocksBefore),
+  } as AnyBlock;
 }
