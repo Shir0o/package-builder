@@ -51,9 +51,9 @@ describe("getRoomFromHash", () => {
 });
 
 describe("makeRoomId", () => {
-  it("returns an adjective-noun-NNNN slug", () => {
+  it("returns an adjective-noun-NNNNNN slug", () => {
     const id = makeRoomId();
-    expect(id).toMatch(/^[a-z]+-[a-z]+-\d{4}$/);
+    expect(id).toMatch(/^[a-z]+-[a-z]+-\d{6}$/);
   });
 
   it("uses URL-safe characters only", () => {

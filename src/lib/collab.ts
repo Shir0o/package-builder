@@ -29,9 +29,10 @@ export function getRoomFromHash(): string | null {
 }
 
 // Small embedded word lists — chosen to be short, friendly, and easy to say
-// aloud. ~50 entries each gives 50 * 50 * 10000 = 25M combinations, plenty
+// aloud. ~50 entries each gives 50 * 50 * 1000000 = 2.5B combinations, plenty
 // for a room ID that doesn't need to be cryptographically unguessable
-// (the URL itself is the access token).
+// (the URL itself is the access token, but a wider search space makes
+// brute-forcing active rooms on the public signaling server impractical).
 const ROOM_ADJECTIVES = [
   "amber", "brisk", "calm", "clever", "cosy", "crisp", "dapper", "eager",
   "fancy", "fluffy", "frosty", "gentle", "giddy", "happy", "jolly", "kind",
@@ -63,11 +64,11 @@ function pickIndex(modulo: number): number {
 }
 
 function pickNumber(): string {
-  const bytes = new Uint16Array(1);
-  const limit = Math.floor(65536 / 10000) * 10000;
+  const bytes = new Uint32Array(1);
+  const limit = Math.floor(4294967296 / 1000000) * 1000000;
   for (;;) {
     crypto.getRandomValues(bytes);
-    if (bytes[0] < limit) return (bytes[0] % 10000).toString().padStart(4, "0");
+    if (bytes[0] < limit) return (bytes[0] % 1000000).toString().padStart(6, "0");
   }
 }
 

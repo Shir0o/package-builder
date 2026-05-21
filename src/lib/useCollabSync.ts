@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as Y from "yjs";
 import { WebrtcProvider } from "y-webrtc";
 import { IndexeddbPersistence } from "y-indexeddb";
@@ -17,10 +17,13 @@ import {
 } from "./collab";
 
 // How long to wait after joining for peer awareness packets before
-// concluding we're alone and should seed from local pkg. Awareness is
-// tiny and travels ahead of doc state, so a short window is enough — a
-// huge improvement on a fixed 1.5s timer that races against slow peers.
-const PEER_DISCOVERY_MS = 300;
+// concluding we're alone and should seed from local pkg. Awareness
+// packets are tiny and travel ahead of full doc state, but a too-short
+// window risks racing against WebRTC signaling on slower / public
+// signaling servers — so we keep a 1s margin. Still strictly better
+// than the old fixed 1.5s timer because we now *gate on awareness*
+// rather than seeding unconditionally at the deadline.
+const PEER_DISCOVERY_MS = 1000;
 const UNDO_CAPTURE_TIMEOUT_MS = 500;
 
 type AwarenessState = {
@@ -265,14 +268,21 @@ export function useCollabSync(
     undoManagerRef.current?.redo();
   }, []);
 
-  return {
-    doc,
-    peers,
-    localUser,
-    status,
-    undo,
-    redo,
-    canUndo: undoState.canUndo,
-    canRedo: undoState.canRedo,
-  };
+  // Memoize so the returned object identity is stable when none of the
+  // underlying values changed. Callers that pass this object into a
+  // useEffect dep would otherwise re-fire on every render and (in the
+  // lazy-load bridge in App.tsx) loop forever.
+  return useMemo<CollabPresence>(
+    () => ({
+      doc,
+      peers,
+      localUser,
+      status,
+      undo,
+      redo,
+      canUndo: undoState.canUndo,
+      canRedo: undoState.canRedo,
+    }),
+    [doc, peers, localUser, status, undo, redo, undoState.canUndo, undoState.canRedo],
+  );
 }
