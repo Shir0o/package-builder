@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import type { AnyBlock, Package } from "../types";
 import { groupIntoPages } from "../lib/pagination";
 import { parseVerseLines } from "../lib/verses";
@@ -147,6 +147,16 @@ type Props = {
 export function DocumentPreview({ pkg, selectedId, onSelectBlock, interactive, peers }: Props) {
   const pages = groupIntoPages(pkg.blocks);
   let pageNum = 0;
+
+  useEffect(() => {
+    if (interactive && selectedId) {
+      const el = document.querySelector(`[data-block-id="${selectedId}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }
+  }, [selectedId, interactive]);
+
   const editorsByBlock = useMemo(() => {
     const m = new Map<string, Peer>();
     const blockIds = new Set(pkg.blocks.map((b) => b.id));
@@ -179,6 +189,7 @@ export function DocumentPreview({ pkg, selectedId, onSelectBlock, interactive, p
                 return (
                   <div
                     key={b.id}
+                    data-block-id={b.id}
                     onClick={
                       interactive
                         ? (e) => {

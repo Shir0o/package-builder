@@ -82,13 +82,18 @@ export function BlockList({
               onDragLeave={() => setOverIdx(null)}
               onDrop={(e) => {
                 e.preventDefault();
-                if (dragIdx !== null && dragIdx !== i) onMove(dragIdx, i);
+                if (dragIdx !== null && dragIdx !== i) {
+                  const targetIdx = dragIdx < i ? i - 1 : i;
+                  if (targetIdx !== dragIdx) {
+                    onMove(dragIdx, targetIdx);
+                  }
+                }
                 setDragIdx(null);
                 setOverIdx(null);
               }}
               onClick={() => onSelect(b.id)}
               style={{
-                ...(overIdx === i && dragIdx !== null && dragIdx !== i
+                ...(overIdx === i && dragIdx !== null && dragIdx !== i && dragIdx !== i - 1
                   ? { borderTopColor: "var(--accent)" }
                   : {}),
                 ...(editor
