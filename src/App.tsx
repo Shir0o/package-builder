@@ -17,11 +17,13 @@ import { DocumentPreview } from "./components/DocumentPreview";
 import { Icons } from "./icons";
 import {
   getRoomFromHash,
+  getYText,
   makeRoomId,
   makeShareUrl,
 } from "./lib/collab";
 import type { ConnectionStatus, Peer } from "./lib/collab";
-import { useCollabSync } from "./lib/useCollabSync";
+import { CollabContext, useCollabSync } from "./lib/useCollabSync";
+import { useYTextInput } from "./lib/useYTextInput";
 import { exportPDF } from "./export/pdf";
 import { exportHTML } from "./export/html";
 import { exportMarkdown } from "./export/markdown";
@@ -83,6 +85,7 @@ export default function App() {
   const [roomId, setRoomId] = useState<string | null>(() => getRoomFromHash());
   const isCollab = roomId !== null;
   const {
+    doc: collabDoc,
     peers,
     status: collabStatus,
     undo: collabUndo,
@@ -435,6 +438,9 @@ export default function App() {
 
   const selected = pkg.blocks.find((b) => b.id === selectedId) || null;
 
+  const titleYText = collabDoc ? getYText(collabDoc, null, ["title"]) : null;
+  const titleBinding = useYTextInput(titleYText, pkg.title, setTitle);
+
   const clampZoom = useCallback(
     (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z)),
     [],
@@ -521,6 +527,7 @@ export default function App() {
   }, [clampZoom]);
 
   return (
+    <CollabContext.Provider value={collabDoc}>
     <div
       className={`app${leftCollapsed ? " left-collapsed" : ""}${selected ? "" : " right-hidden"}`}
       style={{ "--zoom": zoom } as CSSProperties & Record<string, string | number>}
@@ -533,8 +540,8 @@ export default function App() {
         <div className="pkg-title-wrap">
           <input
             className="pkg-title"
-            value={pkg.title}
-            onChange={(e) => setTitle(e.target.value)}
+            ref={titleBinding.ref}
+            onChange={titleBinding.onChange}
             placeholder="Untitled Package"
           />
           {saveStatus === "error" ? (
@@ -789,6 +796,7 @@ export default function App() {
 
       {toast && <div className="toast">{toast}</div>}
     </div>
+    </CollabContext.Provider>
   );
 }
 

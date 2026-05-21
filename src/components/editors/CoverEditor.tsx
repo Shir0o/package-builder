@@ -1,16 +1,32 @@
 import type { CoverData } from "../../types";
+import { useYText } from "../../lib/useCollabSync";
+import { useYTextInput } from "../../lib/useYTextInput";
 
-type Props = { data: CoverData; set: (patch: Partial<CoverData>) => void };
+type Props = {
+  blockId: string;
+  data: CoverData;
+  set: (patch: Partial<CoverData>) => void;
+};
 
-export function CoverEditor({ data, set }: Props) {
+export function CoverEditor({ blockId, data, set }: Props) {
+  const eyebrowY = useYText(blockId, ["eyebrow"]);
+  const titleY = useYText(blockId, ["title"]);
+  const subtitleY = useYText(blockId, ["subtitle"]);
+  const datelineY = useYText(blockId, ["dateline"]);
+
+  const eyebrow = useYTextInput(eyebrowY, data.eyebrow, (v) => set({ eyebrow: v }));
+  const title = useYTextInput(titleY, data.title, (v) => set({ title: v }));
+  const subtitle = useYTextInput(subtitleY, data.subtitle, (v) => set({ subtitle: v }));
+  const dateline = useYTextInput(datelineY, data.dateline, (v) => set({ dateline: v }));
+
   return (
     <>
       <div className="field">
         <label>Eyebrow (small text above title)</label>
         <input
           type="text"
-          value={data.eyebrow}
-          onChange={(e) => set({ eyebrow: e.target.value })}
+          ref={eyebrow.ref}
+          onChange={eyebrow.onChange}
           placeholder="Church in Santa Ana"
         />
       </div>
@@ -18,8 +34,8 @@ export function CoverEditor({ data, set }: Props) {
         <label>Title</label>
         <input
           type="text"
-          value={data.title}
-          onChange={(e) => set({ title: e.target.value })}
+          ref={title.ref}
+          onChange={title.onChange}
           placeholder="Title of the packet"
         />
       </div>
@@ -27,8 +43,8 @@ export function CoverEditor({ data, set }: Props) {
         <label>Subtitle</label>
         <input
           type="text"
-          value={data.subtitle}
-          onChange={(e) => set({ subtitle: e.target.value })}
+          ref={subtitle.ref}
+          onChange={subtitle.onChange}
           placeholder="Optional"
         />
       </div>
@@ -36,8 +52,8 @@ export function CoverEditor({ data, set }: Props) {
         <label>Dateline</label>
         <input
           type="text"
-          value={data.dateline}
-          onChange={(e) => set({ dateline: e.target.value })}
+          ref={dateline.ref}
+          onChange={dateline.onChange}
           placeholder="June 13–22, 2025"
         />
       </div>

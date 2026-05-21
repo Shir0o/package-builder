@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import * as Y from "yjs";
 import { WebrtcProvider } from "y-webrtc";
 import { IndexeddbPersistence } from "y-indexeddb";
@@ -9,12 +9,34 @@ import {
   SEED_ORIGIN,
   applyPackageToYDoc,
   getOrCreateLocalUser,
+  getYText,
   snapshotPackage,
   type ConnectionStatus,
   type LocalUser,
   type Peer,
   type YPackageRoot,
 } from "./collab";
+
+/**
+ * Provides the live Y.Doc (or null in solo mode) so deeply-nested editors can
+ * subscribe to specific Y.Text fields without prop-drilling through every
+ * block component. The value is null when there's no active room.
+ */
+export const CollabContext = createContext<Y.Doc | null>(null);
+
+/**
+ * Look up the Y.Text at (blockId, path) from the CollabContext. Returns null
+ * when there's no doc (solo mode) or when the path doesn't resolve — the
+ * caller should treat null as "use the controlled fallback."
+ */
+export function useYText(
+  blockId: string | null,
+  path: ReadonlyArray<string | number>,
+): Y.Text | null {
+  const doc = useContext(CollabContext);
+  if (!doc) return null;
+  return getYText(doc, blockId, path);
+}
 
 const JOIN_SEED_DELAY_MS = 1500;
 const UNDO_CAPTURE_TIMEOUT_MS = 500;
@@ -25,6 +47,7 @@ type AwarenessState = {
 };
 
 export type CollabPresence = {
+  doc: Y.Doc | null;
   peers: Peer[];
   localUser: LocalUser;
   status: ConnectionStatus;
@@ -82,6 +105,7 @@ export function useCollabSync(
   }
   const localUser = localUserRef.current;
 
+  const [doc, setDoc] = useState<Y.Doc | null>(null);
   const [peers, setPeers] = useState<Peer[]>([]);
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
   const [undoState, setUndoState] = useState<{ canUndo: boolean; canRedo: boolean }>(
@@ -91,6 +115,7 @@ export function useCollabSync(
   useEffect(() => {
     if (!roomId) {
       seededRef.current = false;
+      setDoc(null);
       setPeers([]);
       setStatus("disconnected");
       setUndoState({ canUndo: false, canRedo: false });
@@ -102,6 +127,7 @@ export function useCollabSync(
     docRef.current = doc;
     providerRef.current = provider;
     seededRef.current = false;
+    setDoc(doc);
 
     const root = doc.getMap(PKG_KEY) as YPackageRoot;
 
@@ -218,6 +244,7 @@ export function useCollabSync(
       providerRef.current = null;
       undoManagerRef.current = null;
       seededRef.current = false;
+      setDoc(null);
       setPeers([]);
       setStatus("disconnected");
       setUndoState({ canUndo: false, canRedo: false });
@@ -251,6 +278,7 @@ export function useCollabSync(
   }, []);
 
   return {
+    doc,
     peers,
     localUser,
     status,

@@ -2,13 +2,57 @@ import { useState, useEffect, useRef } from "react";
 import type { VerseGroup, VersesData } from "../../types";
 import { Icons } from "../../icons";
 import { parseVerses, stringifyVerses } from "../../lib/verses";
+import { useYText } from "../../lib/useCollabSync";
+import { useYTextInput } from "../../lib/useYTextInput";
 
-type Props = { data: VersesData; set: (patch: Partial<VersesData>) => void };
+type Props = {
+  blockId: string;
+  data: VersesData;
+  set: (patch: Partial<VersesData>) => void;
+};
 
-export function VersesEditor({ data, set }: Props) {
+type GroupRowProps = {
+  blockId: string;
+  index: number;
+  group: VerseGroup;
+  onUpdate: (patch: Partial<VerseGroup>) => void;
+  onDelete: () => void;
+};
+
+function VerseGroupRow({ blockId, index, group, onUpdate, onDelete }: GroupRowProps) {
+  const refY = useYText(blockId, ["groups", index, "ref"]);
+  const textY = useYText(blockId, ["groups", index, "text"]);
+  const refBinding = useYTextInput(refY, group.ref, (v) => onUpdate({ ref: v }));
+  const textBinding = useYTextInput(textY, group.text, (v) => onUpdate({ text: v }));
+
+  return (
+    <div className="verse-card">
+      <input
+        className="ref"
+        type="text"
+        ref={refBinding.ref}
+        onChange={refBinding.onChange}
+        placeholder="John 3:16"
+      />
+      <textarea
+        ref={textBinding.ref}
+        onChange={textBinding.onChange}
+        placeholder={"16 For God so loved the world…\n17 For God did not send his Son…"}
+      />
+      <button className="x" onClick={onDelete} title="Remove">
+        <Icons.Trash size={12} />
+      </button>
+    </div>
+  );
+}
+
+export function VersesEditor({ blockId, data, set }: Props) {
   const [mode, setMode] = useState<"list" | "bulk">("list");
   const [bulkText, setBulkText] = useState(() => stringifyVerses(data.groups));
   const lastProducedGroups = useRef<VerseGroup[] | null>(null);
+
+  const titleY = useYText(blockId, ["title"]);
+  const title = useYTextInput(titleY, data.title, (v) => set({ title: v }));
 
   // Keep bulkText in sync with data.groups when they change from outside (e.g. card edits, undo/redo, etc.)
   useEffect(() => {
@@ -48,8 +92,8 @@ export function VersesEditor({ data, set }: Props) {
         <label>Section title (optional)</label>
         <input
           type="text"
-          value={data.title}
-          onChange={(e) => set({ title: e.target.value })}
+          ref={title.ref}
+          onChange={title.onChange}
           placeholder="e.g. Lesson 4"
         />
       </div>
@@ -83,23 +127,14 @@ export function VersesEditor({ data, set }: Props) {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
               {data.groups.map((g, i) => (
-                <div className="verse-card" key={i}>
-                  <input
-                    className="ref"
-                    type="text"
-                    value={g.ref}
-                    onChange={(e) => update(i, { ref: e.target.value })}
-                    placeholder="John 3:16"
-                  />
-                  <textarea
-                    value={g.text}
-                    onChange={(e) => update(i, { text: e.target.value })}
-                    placeholder={"16 For God so loved the world…\n17 For God did not send his Son…"}
-                  />
-                  <button className="x" onClick={() => del(i)} title="Remove">
-                    <Icons.Trash size={12} />
-                  </button>
-                </div>
+                <VerseGroupRow
+                  key={i}
+                  blockId={blockId}
+                  index={i}
+                  group={g}
+                  onUpdate={(patch) => update(i, patch)}
+                  onDelete={() => del(i)}
+                />
               ))}
             </div>
             <button

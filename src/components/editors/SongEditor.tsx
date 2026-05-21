@@ -1,9 +1,73 @@
 import type { SongData, Stanza } from "../../types";
 import { Icons } from "../../icons";
+import { useYText } from "../../lib/useCollabSync";
+import { useYTextInput } from "../../lib/useYTextInput";
 
-type Props = { data: SongData; set: (patch: Partial<SongData>) => void };
+type Props = {
+  blockId: string;
+  data: SongData;
+  set: (patch: Partial<SongData>) => void;
+};
 
-export function SongEditor({ data, set }: Props) {
+type StanzaRowProps = {
+  blockId: string;
+  index: number;
+  stanza: Stanza;
+  label: string;
+  onUpdate: (patch: Partial<Stanza>) => void;
+  onDelete: () => void;
+  onMove: (delta: number) => void;
+};
+
+function StanzaRow({ blockId, index, stanza, label, onUpdate, onDelete, onMove }: StanzaRowProps) {
+  const textY = useYText(blockId, ["stanzas", index, "text"]);
+  const text = useYTextInput(textY, stanza.text, (v) => onUpdate({ text: v }));
+
+  return (
+    <div className={"stanza-card " + (stanza.type === "chorus" ? "chorus" : "")}>
+      <div className="stanza-card-head">
+        <span>{label}</span>
+        <div className="seg" style={{ marginLeft: 8 }}>
+          <button
+            className={stanza.type === "verse" ? "on" : ""}
+            onClick={() => onUpdate({ type: "verse" })}
+          >
+            Verse
+          </button>
+          <button
+            className={stanza.type === "chorus" ? "on" : ""}
+            onClick={() => onUpdate({ type: "chorus" })}
+          >
+            Chorus
+          </button>
+        </div>
+        <div className="actions">
+          <button onClick={() => onMove(-1)} title="Move up">
+            <Icons.Up size={11} />
+          </button>
+          <button onClick={() => onMove(+1)} title="Move down">
+            <Icons.Down size={11} />
+          </button>
+          <button onClick={onDelete} title="Remove">
+            <Icons.Trash size={11} />
+          </button>
+        </div>
+      </div>
+      <textarea
+        ref={text.ref}
+        onChange={text.onChange}
+        placeholder={
+          stanza.type === "verse" ? "Verse lines…\nOne per line." : "Chorus lines…"
+        }
+      />
+    </div>
+  );
+}
+
+export function SongEditor({ blockId, data, set }: Props) {
+  const titleY = useYText(blockId, ["title"]);
+  const title = useYTextInput(titleY, data.title, (v) => set({ title: v }));
+
   const update = (i: number, patch: Partial<Stanza>) => {
     const stanzas = data.stanzas.slice();
     stanzas[i] = { ...stanzas[i], ...patch };
@@ -27,8 +91,8 @@ export function SongEditor({ data, set }: Props) {
         <label>Song title</label>
         <input
           type="text"
-          value={data.title}
-          onChange={(e) => set({ title: e.target.value })}
+          ref={title.ref}
+          onChange={title.onChange}
           placeholder="Song title"
         />
       </div>
@@ -43,46 +107,16 @@ export function SongEditor({ data, set }: Props) {
             if (s.type === "verse") vCount += 1;
             const verseLabel = s.type === "verse" ? `Verse ${vCount}` : "Chorus";
             return (
-              <div
+              <StanzaRow
                 key={i}
-                className={"stanza-card " + (s.type === "chorus" ? "chorus" : "")}
-              >
-                <div className="stanza-card-head">
-                  <span>{verseLabel}</span>
-                  <div className="seg" style={{ marginLeft: 8 }}>
-                    <button
-                      className={s.type === "verse" ? "on" : ""}
-                      onClick={() => update(i, { type: "verse" })}
-                    >
-                      Verse
-                    </button>
-                    <button
-                      className={s.type === "chorus" ? "on" : ""}
-                      onClick={() => update(i, { type: "chorus" })}
-                    >
-                      Chorus
-                    </button>
-                  </div>
-                  <div className="actions">
-                    <button onClick={() => move(i, -1)} title="Move up">
-                      <Icons.Up size={11} />
-                    </button>
-                    <button onClick={() => move(i, +1)} title="Move down">
-                      <Icons.Down size={11} />
-                    </button>
-                    <button onClick={() => del(i)} title="Remove">
-                      <Icons.Trash size={11} />
-                    </button>
-                  </div>
-                </div>
-                <textarea
-                  value={s.text}
-                  onChange={(e) => update(i, { text: e.target.value })}
-                  placeholder={
-                    s.type === "verse" ? "Verse lines…\nOne per line." : "Chorus lines…"
-                  }
-                />
-              </div>
+                blockId={blockId}
+                index={i}
+                stanza={s}
+                label={verseLabel}
+                onUpdate={(patch) => update(i, patch)}
+                onDelete={() => del(i)}
+                onMove={(delta) => move(i, delta)}
+              />
             );
           })}
         </div>

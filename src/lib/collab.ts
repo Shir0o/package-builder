@@ -376,6 +376,54 @@ function buildRow(
 // React hook `useCollabSync` lives in ./useCollabSync.ts (excluded from
 // coverage — it depends on WebRTC + window state not well-modeled in jsdom).
 
+// ─── Path lookup ─────────────────────────────────────────────────────────────
+
+/**
+ * Locate a Y.Text inside the doc by `blockId` and a `path`. When `blockId` is
+ * null the path is relative to the root pkg map (e.g. ["title"]). Otherwise
+ * the path is relative to the block's `data` map (e.g. ["text"] for a
+ * paragraph, ["rows", 2, "topic"] for a schedule row, etc.). Returns null if
+ * any segment of the path is missing or the leaf isn't a Y.Text — callers
+ * fall back to their controlled state in that case.
+ */
+export function getYText(
+  doc: Y.Doc,
+  blockId: string | null,
+  path: ReadonlyArray<string | number>,
+): Y.Text | null {
+  const root = doc.getMap(PKG_KEY) as YPackageRoot;
+  let node: unknown;
+  if (blockId === null) {
+    node = root;
+  } else {
+    const blocksY = root.get("blocks") as Y.Array<YBlock> | undefined;
+    if (!blocksY) return null;
+    let yb: YBlock | null = null;
+    for (const b of blocksY) {
+      if ((b.get("id") as string) === blockId) {
+        yb = b;
+        break;
+      }
+    }
+    if (!yb) return null;
+    node = yb.get("data");
+    if (!node) return null;
+  }
+  for (const k of path) {
+    if (node instanceof Y.Map) {
+      node = node.get(String(k));
+    } else if (node instanceof Y.Array) {
+      const idx = typeof k === "number" ? k : Number(k);
+      if (!Number.isFinite(idx)) return null;
+      node = node.get(idx);
+    } else {
+      return null;
+    }
+    if (node == null) return null;
+  }
+  return node instanceof Y.Text ? node : null;
+}
+
 // ─── Presence (awareness) ────────────────────────────────────────────────────
 
 export type LocalUser = { name: string; color: string };
