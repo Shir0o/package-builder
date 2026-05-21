@@ -14,6 +14,7 @@ import { getSavedHandle, setSavedHandle } from "./lib/handleStore";
 import { BlockList } from "./components/BlockList";
 import { PropertiesPanel } from "./components/PropertiesPanel";
 import { DocumentPreview } from "./components/DocumentPreview";
+import { ShareModal } from "./components/ShareModal";
 import { Icons } from "./icons";
 import {
   getRoomFromHash,
@@ -76,7 +77,9 @@ export default function App() {
   } = usePackageState(loadPackage);
   const [roomId, setRoomId] = useState<string | null>(() => getRoomFromHash());
   const isCollab = roomId !== null;
-  useCollabSync(roomId, pkg, replacePkg);
+  const [peerCount, setPeerCount] = useState(0);
+  const [shareOpen, setShareOpen] = useState(false);
+  useCollabSync(roomId, pkg, replacePkg, setPeerCount);
   useEffect(() => {
     const onHash = () => setRoomId(getRoomFromHash());
     window.addEventListener("hashchange", onHash);
@@ -232,16 +235,11 @@ export default function App() {
     showToast("Unlinked file");
   };
 
-  const startShare = async () => {
+  const startShare = () => {
     const id = makeRoomId();
-    const url = makeShareUrl(id);
     location.hash = `room=${id}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      showToast("Share link copied — anyone with it can edit");
-    } catch {
-      showToast(`Share link: ${url}`);
-    }
+    setRoomId(id);
+    setShareOpen(true);
   };
 
   const copyShareLink = async () => {
@@ -258,6 +256,7 @@ export default function App() {
   const leaveShare = () => {
     history.replaceState(null, "", location.pathname + location.search);
     setRoomId(null);
+    setShareOpen(false);
     showToast("Left shared session");
   };
 
@@ -588,14 +587,14 @@ export default function App() {
               Share…
             </button>
           ) : (
-            <>
-              <button className="btn ghost tiny" onClick={copyShareLink} title="Copy shared session link">
-                Copy link
-              </button>
-              <button className="btn ghost tiny" onClick={leaveShare} title="Leave shared session">
-                Leave
-              </button>
-            </>
+            <button
+              type="button"
+              className="share-pill"
+              onClick={() => setShareOpen(true)}
+              title="Open share details"
+            >
+              Sharing · {peerCount} {peerCount === 1 ? "peer" : "peers"}
+            </button>
           )}
           <label
             style={{
@@ -768,6 +767,16 @@ export default function App() {
       />
 
       {toast && <div className="toast">{toast}</div>}
+
+      {shareOpen && roomId && (
+        <ShareModal
+          url={makeShareUrl(roomId)}
+          peerCount={peerCount}
+          onCopy={copyShareLink}
+          onStop={leaveShare}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
     </div>
   );
 }

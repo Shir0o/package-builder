@@ -388,10 +388,13 @@ export function useCollabSync(
   roomId: string | null,
   pkg: Package,
   onRemote: (pkg: Package) => void,
+  onPeers?: (count: number) => void,
 ) {
   const onRemoteRef = useRef(onRemote);
+  const onPeersRef = useRef(onPeers);
   const pkgRef = useRef(pkg);
   onRemoteRef.current = onRemote;
+  onPeersRef.current = onPeers;
   pkgRef.current = pkg;
 
   const docRef = useRef<Y.Doc | null>(null);
@@ -419,6 +422,14 @@ export function useCollabSync(
     };
     root.observeDeep(onEvents);
 
+    const onAwareness = () => {
+      // Subtract one for ourselves.
+      const n = Math.max(0, provider.awareness.getStates().size - 1);
+      onPeersRef.current?.(n);
+    };
+    provider.awareness.on("change", onAwareness);
+    onAwareness();
+
     // If the room already had state when we attached, adopt it immediately.
     if (root.has("blocks") || root.has("title")) {
       seededRef.current = true;
@@ -436,6 +447,7 @@ export function useCollabSync(
 
     return () => {
       clearTimeout(seedTimer);
+      provider.awareness.off("change", onAwareness);
       root.unobserveDeep(onEvents);
       provider.destroy();
       doc.destroy();
