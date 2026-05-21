@@ -1,6 +1,6 @@
 import type { ScheduleData, ScheduleRow } from "../../types";
 import { Icons } from "../../icons";
-import { useYText } from "../../lib/useCollabSync";
+import { useYText } from "../../lib/collabContext";
 import { useYTextInput } from "../../lib/useYTextInput";
 
 type Props = {

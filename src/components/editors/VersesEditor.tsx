@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import type { VerseGroup, VersesData } from "../../types";
 import { Icons } from "../../icons";
 import { parseVerses, stringifyVerses } from "../../lib/verses";
-import { useYText } from "../../lib/useCollabSync";
+import { useYText } from "../../lib/collabContext";
 import { useYTextInput } from "../../lib/useYTextInput";
 
 type Props = {

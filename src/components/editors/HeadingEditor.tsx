@@ -1,5 +1,5 @@
 import type { HeadingData } from "../../types";
-import { useYText } from "../../lib/useCollabSync";
+import { useYText } from "../../lib/collabContext";
 import { useYTextInput } from "../../lib/useYTextInput";
 
 type Props = {

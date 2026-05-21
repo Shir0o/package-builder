@@ -23,7 +23,9 @@ import {
   makeShareUrl,
 } from "./lib/collab";
 import type { ConnectionStatus, Peer } from "./lib/collab";
-import { CollabContext, useCollabSync } from "./lib/useCollabSync";
+import { CollabContext } from "./lib/collabContext";
+import type { CollabPresence } from "./lib/useCollabSync";
+import type * as UseCollabSyncModule from "./lib/useCollabSync";
 import { useYTextInput } from "./lib/useYTextInput";
 import { exportPDF } from "./export/pdf";
 import { exportHTML } from "./export/html";
@@ -38,6 +40,69 @@ import {
 } from "./export/util";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
+
+type UseCollabSyncMod = typeof UseCollabSyncModule;
+
+const SOLO_PRESENCE: CollabPresence = {
+  doc: null,
+  peers: [],
+  localUser: { name: "", color: "" },
+  status: "disconnected",
+  undo: () => {},
+  redo: () => {},
+  canUndo: false,
+  canRedo: false,
+};
+
+/**
+ * Dynamically load the collab connection layer (y-webrtc + y-indexeddb +
+ * UndoManager + awareness) when the user enters a room. The chunk is
+ * code-split out of the main bundle and fetched only on first share.
+ */
+function useUseCollabSyncModule(roomId: string | null): UseCollabSyncMod | null {
+  const [mod, setMod] = useState<UseCollabSyncMod | null>(null);
+  useEffect(() => {
+    if (!roomId) {
+      setMod(null);
+      return;
+    }
+    let cancelled = false;
+    import("./lib/useCollabSync").then((m) => {
+      if (!cancelled) setMod(m);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [roomId]);
+  return mod;
+}
+
+/**
+ * Mounted only when the connection-layer module has loaded and a roomId is
+ * active. Calls the module's hook (so it can run unconditionally inside)
+ * and lifts the returned presence object into App via onPresence.
+ */
+function CollabBridge({
+  module,
+  roomId,
+  pkg,
+  onRemote,
+  selectedId,
+  onPresence,
+}: {
+  module: UseCollabSyncMod;
+  roomId: string;
+  pkg: Package;
+  onRemote: (pkg: Package) => void;
+  selectedId: string | null;
+  onPresence: (p: CollabPresence) => void;
+}) {
+  const presence = module.useCollabSync(roomId, pkg, onRemote, selectedId);
+  useEffect(() => {
+    onPresence(presence);
+  }, [presence, onPresence]);
+  return null;
+}
 
 declare global {
   interface Window {
@@ -85,6 +150,8 @@ export default function App() {
   } = usePackageState(loadPackage);
   const [roomId, setRoomId] = useState<string | null>(() => getRoomFromHash());
   const isCollab = roomId !== null;
+  const collabSyncModule = useUseCollabSyncModule(roomId);
+  const [collabPresence, setCollabPresence] = useState<CollabPresence>(SOLO_PRESENCE);
   const {
     doc: collabDoc,
     peers,
@@ -93,7 +160,12 @@ export default function App() {
     redo: collabRedo,
     canUndo: collabCanUndo,
     canRedo: collabCanRedo,
-  } = useCollabSync(roomId, pkg, replacePkg, selectedId);
+  } = collabPresence;
+  // Reset presence to solo defaults whenever the room is cleared so peers
+  // / undo state from the previous session don't linger.
+  useEffect(() => {
+    if (!roomId) setCollabPresence(SOLO_PRESENCE);
+  }, [roomId]);
   const undo = isCollab ? collabUndo : localUndo;
   const redo = isCollab ? collabRedo : localRedo;
   const canUndo = isCollab ? collabCanUndo : localCanUndo;
@@ -805,6 +877,17 @@ export default function App() {
           onCopy={copyShareLink}
           onStop={leaveShare}
           onClose={() => setShareOpen(false)}
+        />
+      )}
+
+      {collabSyncModule && roomId && (
+        <CollabBridge
+          module={collabSyncModule}
+          roomId={roomId}
+          pkg={pkg}
+          onRemote={replacePkg}
+          selectedId={selectedId}
+          onPresence={setCollabPresence}
         />
       )}
     </div>

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as Y from "yjs";
 import { WebrtcProvider } from "y-webrtc";
 import { IndexeddbPersistence } from "y-indexeddb";
@@ -9,34 +9,12 @@ import {
   SEED_ORIGIN,
   applyPackageToYDoc,
   getOrCreateLocalUser,
-  getYText,
   snapshotPackage,
   type ConnectionStatus,
   type LocalUser,
   type Peer,
   type YPackageRoot,
 } from "./collab";
-
-/**
- * Provides the live Y.Doc (or null in solo mode) so deeply-nested editors can
- * subscribe to specific Y.Text fields without prop-drilling through every
- * block component. The value is null when there's no active room.
- */
-export const CollabContext = createContext<Y.Doc | null>(null);
-
-/**
- * Look up the Y.Text at (blockId, path) from the CollabContext. Returns null
- * when there's no doc (solo mode) or when the path doesn't resolve — the
- * caller should treat null as "use the controlled fallback."
- */
-export function useYText(
-  blockId: string | null,
-  path: ReadonlyArray<string | number>,
-): Y.Text | null {
-  const doc = useContext(CollabContext);
-  if (!doc) return null;
-  return getYText(doc, blockId, path);
-}
 
 // How long to wait after joining for peer awareness packets before
 // concluding we're alone and should seed from local pkg. Awareness is
