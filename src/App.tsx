@@ -27,7 +27,7 @@ import { exportHTML } from "./export/html";
 import { exportMarkdown } from "./export/markdown";
 import { exportText } from "./export/text";
 import { exportJSON } from "./export/json";
-import { safeName } from "./export/util";
+import { PACKAGE_EXTENSION, PACKAGE_MIME, safeName } from "./export/util";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -185,11 +185,11 @@ export default function App() {
     if (!isFsaSupported() || !window.showSaveFilePicker) return;
     try {
       const handle = await window.showSaveFilePicker({
-        suggestedName: safeName(pkg.title) + ".pkg.json",
+        suggestedName: safeName(pkg.title) + PACKAGE_EXTENSION,
         types: [
           {
             description: "Package",
-            accept: { "application/json": [".pkg.json", ".json"] },
+            accept: { [PACKAGE_MIME]: [PACKAGE_EXTENSION, ".json"] },
           },
         ],
       });
@@ -213,7 +213,7 @@ export default function App() {
         types: [
           {
             description: "Package",
-            accept: { "application/json": [".pkg.json", ".json"] },
+            accept: { [PACKAGE_MIME]: [PACKAGE_EXTENSION, ".json"] },
           },
         ],
         multiple: false,

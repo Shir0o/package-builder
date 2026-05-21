@@ -1,3 +1,6 @@
+export const PACKAGE_EXTENSION = ".pkg.json";
+export const PACKAGE_MIME = "application/json";
+
 export function downloadBlob(filename: string, mime: string, content: string) {
   const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
