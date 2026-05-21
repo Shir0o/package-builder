@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useMemo } from "react";
 import type { AnyBlock, Package } from "../types";
 import { groupIntoPages } from "../lib/pagination";
 import { parseVerseLines } from "../lib/verses";
+import type { Peer } from "../lib/collab";
 
 export function RenderBlock({ block }: { block: AnyBlock }) {
   switch (block.type) {
@@ -140,11 +141,19 @@ type Props = {
   selectedId?: string | null;
   onSelectBlock?: (id: string) => void;
   interactive?: boolean;
+  peers?: Peer[];
 };
 
-export function DocumentPreview({ pkg, selectedId, onSelectBlock, interactive }: Props) {
+export function DocumentPreview({ pkg, selectedId, onSelectBlock, interactive, peers }: Props) {
   const pages = groupIntoPages(pkg.blocks);
   let pageNum = 0;
+  const editorsByBlock = useMemo(() => {
+    const m = new Map<string, Peer>();
+    for (const p of peers ?? []) {
+      if (p.selectedBlockId && !m.has(p.selectedBlockId)) m.set(p.selectedBlockId, p);
+    }
+    return m;
+  }, [peers]);
   return (
     <>
       {pages.map((pageBlocks, pi) => {
@@ -154,33 +163,62 @@ export function DocumentPreview({ pkg, selectedId, onSelectBlock, interactive }:
         return (
           <React.Fragment key={pi}>
             <div className="paper" data-page={currentPage}>
-              {pageBlocks.map((b) => (
-                <div
-                  key={b.id}
-                  onClick={
-                    interactive
-                      ? (e) => {
-                          e.stopPropagation();
-                          onSelectBlock && onSelectBlock(b.id);
-                        }
-                      : undefined
-                  }
-                  style={
-                    interactive
-                      ? {
-                          cursor: "pointer",
-                          outline:
-                            selectedId === b.id ? "2px solid oklch(70% 0.14 35)" : "none",
-                          outlineOffset: "4px",
-                          borderRadius: "2px",
-                          transition: "outline-color .15s",
-                        }
-                      : undefined
-                  }
-                >
-                  <RenderBlock block={b} />
-                </div>
-              ))}
+              {pageBlocks.map((b) => {
+                const editor = editorsByBlock.get(b.id);
+                const peerOutline =
+                  editor && selectedId !== b.id
+                    ? `2px dashed ${editor.user.color}`
+                    : null;
+                return (
+                  <div
+                    key={b.id}
+                    onClick={
+                      interactive
+                        ? (e) => {
+                            e.stopPropagation();
+                            onSelectBlock && onSelectBlock(b.id);
+                          }
+                        : undefined
+                    }
+                    style={
+                      interactive
+                        ? {
+                            cursor: "pointer",
+                            outline:
+                              selectedId === b.id
+                                ? "2px solid oklch(70% 0.14 35)"
+                                : peerOutline ?? "none",
+                            outlineOffset: "4px",
+                            borderRadius: "2px",
+                            transition: "outline-color .15s",
+                            position: "relative",
+                          }
+                        : undefined
+                    }
+                  >
+                    {editor && interactive && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: -10,
+                          right: 0,
+                          padding: "1px 6px",
+                          fontSize: 9,
+                          fontWeight: 600,
+                          color: "#fff",
+                          background: editor.user.color,
+                          borderRadius: 999,
+                          pointerEvents: "none",
+                          zIndex: 1,
+                        }}
+                      >
+                        {editor.user.name}
+                      </div>
+                    )}
+                    <RenderBlock block={b} />
+                  </div>
+                );
+              })}
               {pkg.pageNumbers && !isCoverPage ? (
                 <div className="pg-number">{currentPage}</div>
               ) : null}

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as Y from "yjs";
 import { WebrtcProvider } from "y-webrtc";
 import { IndexeddbPersistence } from "y-indexeddb";
@@ -8,11 +8,26 @@ import {
   PKG_KEY,
   SEED_ORIGIN,
   applyPackageToYDoc,
+  getOrCreateLocalUser,
   snapshotPackage,
+  type ConnectionStatus,
+  type LocalUser,
+  type Peer,
   type YPackageRoot,
 } from "./collab";
 
 const JOIN_SEED_DELAY_MS = 1500;
+
+type AwarenessState = {
+  user?: LocalUser;
+  selectedBlockId?: string | null;
+};
+
+export type CollabPresence = {
+  peers: Peer[];
+  localUser: LocalUser;
+  status: ConnectionStatus;
+};
 
 /**
  * Bind a React-held `Package` to a Yjs room over y-webrtc, with
@@ -28,6 +43,12 @@ const JOIN_SEED_DELAY_MS = 1500;
  * state that IndexedDB is about to restore. If IndexedDB fails to open,
  * we fall back to the original seed-after-window behavior.
  *
+ * Presence: the local user's identity (random name + color, persisted
+ * in sessionStorage for the tab) and current `selectedBlockId` are
+ * published via the provider's awareness channel. The hook returns the
+ * list of remote peers, the local identity, and a coarse connection
+ * status ("disconnected" | "alone" | "connected").
+ *
  * Excluded from coverage: depends on WebRTC + window state that isn't
  * straightforwardly testable in jsdom.
  */
@@ -35,19 +56,34 @@ export function useCollabSync(
   roomId: string | null,
   pkg: Package,
   onRemote: (pkg: Package) => void,
-) {
+  selectedBlockId: string | null = null,
+): CollabPresence {
   const onRemoteRef = useRef(onRemote);
   const pkgRef = useRef(pkg);
+  const selectedBlockIdRef = useRef(selectedBlockId);
   onRemoteRef.current = onRemote;
   pkgRef.current = pkg;
+  selectedBlockIdRef.current = selectedBlockId;
 
   const docRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<WebrtcProvider | null>(null);
   const seededRef = useRef(false);
 
+  // One identity per tab, generated lazily on the first render.
+  const localUserRef = useRef<LocalUser | null>(null);
+  if (localUserRef.current === null) {
+    localUserRef.current = getOrCreateLocalUser();
+  }
+  const localUser = localUserRef.current;
+
+  const [peers, setPeers] = useState<Peer[]>([]);
+  const [status, setStatus] = useState<ConnectionStatus>("disconnected");
+
   useEffect(() => {
     if (!roomId) {
       seededRef.current = false;
+      setPeers([]);
+      setStatus("disconnected");
       return;
     }
     const doc = new Y.Doc();
@@ -68,6 +104,42 @@ export function useCollabSync(
       onRemoteRef.current(snapshotPackage(root));
     };
     root.observeDeep(onEvents);
+
+    // Awareness: publish identity + selection in a single state so peers
+    // see our current selection on first announce (no null → id flicker).
+    const awareness = provider.awareness;
+    awareness.setLocalState({
+      user: localUser,
+      selectedBlockId: selectedBlockIdRef.current,
+    });
+
+    const recomputePeers = () => {
+      const states = awareness.getStates() as Map<number, AwarenessState>;
+      const next: Peer[] = [];
+      states.forEach((state, clientId) => {
+        if (clientId === awareness.clientID) return;
+        if (!state.user) return;
+        next.push({
+          clientId,
+          user: state.user,
+          selectedBlockId: state.selectedBlockId ?? null,
+        });
+      });
+      setPeers(next);
+      setStatus(
+        !provider.connected
+          ? "disconnected"
+          : next.length > 0
+            ? "connected"
+            : "alone",
+      );
+    };
+    const onAwarenessChange = () => recomputePeers();
+    const onStatus = () => recomputePeers();
+    awareness.on("change", onAwarenessChange);
+    provider.on("status", onStatus);
+    provider.on("peers", onAwarenessChange);
+    recomputePeers();
 
     let cancelled = false;
     let seedTimer: ReturnType<typeof setTimeout> | undefined;
@@ -102,14 +174,19 @@ export function useCollabSync(
       cancelled = true;
       if (seedTimer !== undefined) clearTimeout(seedTimer);
       root.unobserveDeep(onEvents);
+      awareness.off("change", onAwarenessChange);
+      provider.off("status", onStatus);
+      provider.off("peers", onAwarenessChange);
       provider.destroy();
       persistence.destroy();
       doc.destroy();
       docRef.current = null;
       providerRef.current = null;
       seededRef.current = false;
+      setPeers([]);
+      setStatus("disconnected");
     };
-  }, [roomId]);
+  }, [roomId, localUser]);
 
   useEffect(() => {
     if (!roomId) return;
@@ -121,4 +198,14 @@ export function useCollabSync(
       applyPackageToYDoc(root, pkg);
     }, LOCAL_ORIGIN);
   }, [roomId, pkg]);
+
+  // Broadcast our current selection so peers can highlight the block
+  // we're editing.
+  useEffect(() => {
+    const provider = providerRef.current;
+    if (!provider) return;
+    provider.awareness.setLocalStateField("selectedBlockId", selectedBlockId);
+  }, [selectedBlockId, roomId]);
+
+  return { peers, localUser, status };
 }

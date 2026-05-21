@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import type { CSSProperties } from "react";
 import type { AnyBlock, BlockTypeKey, Package } from "../types";
 import { BLOCK_ORDER_FOR_PICKER, BLOCK_TYPES } from "../blocks";
 import { Icons } from "../icons";
+import type { Peer } from "../lib/collab";
 
 type Props = {
   pkg: Package;
@@ -11,6 +13,7 @@ type Props = {
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
   onAdd: (type: BlockTypeKey) => void;
+  peers?: Peer[];
 };
 
 export function BlockList({
@@ -21,7 +24,17 @@ export function BlockList({
   onDelete,
   onDuplicate,
   onAdd,
+  peers = [],
 }: Props) {
+  // First peer per block keeps the UI calm even if two peers select the
+  // same block — the second one just doesn't get a badge.
+  const editorsByBlock = useMemo(() => {
+    const m = new Map<string, Peer>();
+    for (const p of peers) {
+      if (p.selectedBlockId && !m.has(p.selectedBlockId)) m.set(p.selectedBlockId, p);
+    }
+    return m;
+  }, [peers]);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [overIdx, setOverIdx] = useState<number | null>(null);
 
@@ -40,13 +53,15 @@ export function BlockList({
         )}
         {pkg.blocks.map((b: AnyBlock, i) => {
           const def = BLOCK_TYPES[b.type];
+          const editor = editorsByBlock.get(b.id);
           return (
             <div
               key={b.id}
               className={
                 "block-row" +
                 (selectedId === b.id ? " selected" : "") +
-                (overIdx === i ? " over" : "")
+                (overIdx === i ? " over" : "") +
+                (editor ? " peer-editing" : "")
               }
               draggable
               onDragStart={(e) => {
@@ -65,11 +80,14 @@ export function BlockList({
                 setOverIdx(null);
               }}
               onClick={() => onSelect(b.id)}
-              style={
-                overIdx === i && dragIdx !== null && dragIdx !== i
+              style={{
+                ...(overIdx === i && dragIdx !== null && dragIdx !== i
                   ? { borderTopColor: "var(--accent)" }
-                  : {}
-              }
+                  : {}),
+                ...(editor
+                  ? ({ ["--peer-color"]: editor.user.color } as CSSProperties)
+                  : {}),
+              }}
             >
               <div className="drag" title="Drag to reorder">
                 <Icons.Drag size={12} />
@@ -78,6 +96,15 @@ export function BlockList({
               <div className="label">
                 <span className="type">{def.label}</span>
                 {(def.summary as (d: AnyBlock["data"]) => string)(b.data)}
+                {editor && (
+                  <span
+                    className="peer-editing-badge"
+                    style={{ background: editor.user.color }}
+                    title={`${editor.user.name} is editing`}
+                  >
+                    {editor.user.name} editing
+                  </span>
+                )}
               </div>
               <div className="actions">
                 <button

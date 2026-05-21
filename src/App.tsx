@@ -20,6 +20,7 @@ import {
   makeRoomId,
   makeShareUrl,
 } from "./lib/collab";
+import type { ConnectionStatus, Peer } from "./lib/collab";
 import { useCollabSync } from "./lib/useCollabSync";
 import { exportPDF } from "./export/pdf";
 import { exportHTML } from "./export/html";
@@ -76,7 +77,12 @@ export default function App() {
   } = usePackageState(loadPackage);
   const [roomId, setRoomId] = useState<string | null>(() => getRoomFromHash());
   const isCollab = roomId !== null;
-  useCollabSync(roomId, pkg, replacePkg);
+  const { peers, status: collabStatus } = useCollabSync(
+    roomId,
+    pkg,
+    replacePkg,
+    selectedId,
+  );
   useEffect(() => {
     const onHash = () => setRoomId(getRoomFromHash());
     window.addEventListener("hashchange", onHash);
@@ -589,6 +595,7 @@ export default function App() {
             </button>
           ) : (
             <>
+              <PresenceIndicator status={collabStatus} peers={peers} />
               <button className="btn ghost tiny" onClick={copyShareLink} title="Copy shared session link">
                 Copy link
               </button>
@@ -704,6 +711,7 @@ export default function App() {
         onDelete={deleteBlock}
         onDuplicate={duplicateBlock}
         onAdd={addBlock}
+        peers={isCollab ? peers : []}
       />
 
       <button
@@ -725,6 +733,7 @@ export default function App() {
             selectedId={selectedId}
             onSelectBlock={setSelectedId}
             interactive
+            peers={isCollab ? peers : []}
           />
         </div>
       </main>
@@ -770,4 +779,57 @@ export default function App() {
       {toast && <div className="toast">{toast}</div>}
     </div>
   );
+}
+
+function PresenceIndicator({
+  status,
+  peers,
+}: {
+  status: ConnectionStatus;
+  peers: Peer[];
+}) {
+  const statusLabel =
+    status === "disconnected"
+      ? "Disconnected"
+      : status === "alone"
+        ? "Connected — waiting for peers"
+        : `Connected · ${peers.length} peer${peers.length === 1 ? "" : "s"}`;
+  const MAX_PILLS = 5;
+  const shown = peers.slice(0, MAX_PILLS);
+  const overflow = peers.length - shown.length;
+  return (
+    <div className="presence" title={statusLabel}>
+      <span className={`presence-dot presence-dot-${status}`} aria-hidden="true" />
+      <span className="presence-count" aria-label={statusLabel}>
+        {peers.length}
+      </span>
+      <div className="presence-pills">
+        {shown.map((p) => (
+          <span
+            key={p.clientId}
+            className="presence-pill"
+            style={{ background: p.user.color }}
+            title={p.user.name}
+            aria-label={p.user.name}
+          >
+            {peerInitials(p.user.name)}
+          </span>
+        ))}
+        {overflow > 0 && (
+          <span
+            className="presence-pill presence-pill-overflow"
+            title={`+${overflow} more`}
+          >
+            +{overflow}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function peerInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return (name[0] || "?").toUpperCase();
 }
