@@ -375,3 +375,64 @@ function buildRow(
 
 // React hook `useCollabSync` lives in ./useCollabSync.ts (excluded from
 // coverage — it depends on WebRTC + window state not well-modeled in jsdom).
+
+// ─── Presence (awareness) ────────────────────────────────────────────────────
+
+export type LocalUser = { name: string; color: string };
+export type Peer = {
+  clientId: number;
+  user: LocalUser;
+  selectedBlockId: string | null;
+};
+export type ConnectionStatus = "disconnected" | "alone" | "connected";
+
+const IDENTITY_KEY = "collab-identity";
+
+const ADJECTIVES = [
+  "Anonymous", "Curious", "Cheerful", "Quiet", "Bold", "Gentle", "Brave",
+  "Witty", "Calm", "Eager", "Lively", "Kind", "Swift", "Clever", "Sunny",
+];
+const ANIMALS = [
+  "Otter", "Fox", "Badger", "Heron", "Marmot", "Lynx", "Wren", "Stoat",
+  "Falcon", "Hare", "Newt", "Quokka", "Tapir", "Ibex", "Puffin",
+];
+
+function pick<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+/** Fresh random identity. New name + new HSL color each call. */
+export function generateIdentity(): LocalUser {
+  const name = `${pick(ADJECTIVES)} ${pick(ANIMALS)}`;
+  const hue = Math.floor(Math.random() * 360);
+  const color = `hsl(${hue} 70% 45%)`;
+  return { name, color };
+}
+
+/**
+ * Return this tab's collab identity, generating + persisting one in
+ * sessionStorage on first call. Reloads within the same tab keep the
+ * same name and color; a new tab gets a new identity. Falls back to a
+ * fresh identity if sessionStorage isn't available.
+ */
+export function getOrCreateLocalUser(): LocalUser {
+  if (typeof sessionStorage === "undefined") return generateIdentity();
+  try {
+    const raw = sessionStorage.getItem(IDENTITY_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as LocalUser;
+      if (parsed && typeof parsed.name === "string" && typeof parsed.color === "string") {
+        return parsed;
+      }
+    }
+  } catch {
+    // fall through to fresh identity
+  }
+  const id = generateIdentity();
+  try {
+    sessionStorage.setItem(IDENTITY_KEY, JSON.stringify(id));
+  } catch {
+    // ignore — non-persistent identity is fine
+  }
+  return id;
+}
