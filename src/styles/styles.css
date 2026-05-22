@@ -359,7 +359,7 @@ textarea { resize: vertical; }
 .paper {
   background: white;
   width: 8.5in;
-  min-height: 11in;
+  height: 11in;
   padding: 0.85in 0.85in 1in;
   box-shadow: 0 0 0 1px var(--line), 0 12px 30px -16px rgba(0,0,0,0.18);
   font-family: var(--doc-font);
@@ -367,6 +367,28 @@ textarea { resize: vertical; }
   font-size: 12.5pt;
   line-height: 1.45;
   position: relative;
+}
+/* Dashed guide marking the bottom edge of the printable area (US Letter,
+   1in bottom margin). Lets users see exactly where each page ends on screen. */
+.paper::after {
+  content: "";
+  position: absolute;
+  left: 0.85in;
+  right: 0.85in;
+  bottom: 1in;
+  border-top: 1px dashed var(--line);
+  pointer-events: none;
+}
+.paper.paper-measure::after { display: none; }
+.overflow-warning {
+  background: oklch(96% 0.05 25);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  font-size: 9pt;
+  font-family: var(--mono-font);
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin: 0 0 6pt;
 }
 .paper .pg-number {
   position: absolute;
@@ -812,6 +834,8 @@ textarea { resize: vertical; }
   }
   .paper:last-child { page-break-after: auto; }
   .paper .pg-number { position: absolute; bottom: 0.4in; }
+  .paper::after { display: none !important; }
+  .paper-measure, .overflow-warning { display: none !important; }
 }
 @page { size: letter; margin: 0; }
 
