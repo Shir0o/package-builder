@@ -102,8 +102,9 @@ describe("BLOCK_TYPES.summary", () => {
 
   it("notes: shows title and line count", () => {
     const def = BLOCK_TYPES.notes;
-    expect(def.summary({ title: "T", lines: 5 })).toBe("T · 5 lines");
-    expect(def.summary({ title: "", lines: 0 })).toBe("Notes · 0 lines");
+    expect(def.summary({ title: "T", lines: 5, autoLines: false })).toBe("T · 5 lines");
+    expect(def.summary({ title: "", lines: 0, autoLines: false })).toBe("Notes · 0 lines");
+    expect(def.summary({ title: "T", lines: 5, autoLines: true })).toBe("T · Auto lines");
   });
 
   it("rule and pagebreak have fixed labels", () => {

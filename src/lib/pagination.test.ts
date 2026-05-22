@@ -69,11 +69,11 @@ describe("flattenToUnits", () => {
   });
 
   it("breaks a notes block into a title unit plus a parametric lines unit", () => {
-    const n = mk("notes", "n", { title: "Notes", lines: 12 });
+    const n = mk("notes", "n", { title: "Notes", lines: 12, autoLines: false });
     const units = flattenToUnits([n]);
     expect(units).toEqual([
       { kind: "notes-title", blockId: "n", title: "Notes" },
-      { kind: "notes-lines", blockId: "n", lines: 12 },
+      { kind: "notes-lines", blockId: "n", lines: 12, autoLines: false },
     ]);
   });
 
@@ -81,7 +81,7 @@ describe("flattenToUnits", () => {
     const n = mk("notes", "n", { title: "", lines: 0 });
     const units = flattenToUnits([n]);
     expect(units).toHaveLength(1);
-    expect(units[0]).toMatchObject({ kind: "notes-lines", blockId: "n" });
+    expect(units[0]).toMatchObject({ kind: "notes-lines", blockId: "n", autoLines: true });
     expect((units[0] as { lines: number }).lines).toBeGreaterThan(0);
   });
 });
@@ -187,5 +187,47 @@ describe("packPages", () => {
     const pages = packPages([block("a", 30), block("big", 500)], 100);
     expect(pages).toHaveLength(2);
     expect(pages[1]).toEqual([{ kind: "block", block: expect.objectContaining({ id: "big" }) }]);
+  });
+
+  it("prefills a notes block to the remainder of the page when autoLines is true", () => {
+    const notes: MeasuredUnit = {
+      unit: { kind: "notes-lines", blockId: "n", lines: 28, autoLines: true },
+      height: 560,
+      split: { lineHeight: 20, lines: 28 },
+    };
+    // 30px used by a block -> 70px remaining.
+    // 70px fits 3 lines of 20px (60px).
+    const pages = packPages([block("a", 30), notes], 100);
+    expect(pages).toHaveLength(1);
+    expect(pages[0]).toHaveLength(2);
+    expect(pages[0][1]).toMatchObject({ kind: "notes-lines", lines: 3 });
+  });
+
+  it("forces notes block to next page if no lines fit on current page when autoLines is true", () => {
+    const notes: MeasuredUnit = {
+      unit: { kind: "notes-lines", blockId: "n", lines: 28, autoLines: true },
+      height: 560,
+      split: { lineHeight: 20, lines: 28 },
+    };
+    // 90px used -> 10px remaining (less than 20px lineHeight).
+    // It should flush page 1 and prefill page 2 (5 lines fit in 100px).
+    const pages = packPages([block("a", 90), notes], 100);
+    expect(pages).toHaveLength(2);
+    expect(pages[0]).toHaveLength(1);
+    expect(pages[1]).toHaveLength(1);
+    expect(pages[1][0]).toMatchObject({ kind: "notes-lines", lines: 5 });
+  });
+
+  it("defaults to a single line if page is empty and line is taller than page", () => {
+    const notes: MeasuredUnit = {
+      unit: { kind: "notes-lines", blockId: "n", lines: 28, autoLines: true },
+      height: 5600,
+      split: { lineHeight: 200, lines: 28 },
+    };
+    // pageHeight is 100, lineHeight is 200. It should fit 1 line on an empty page.
+    const pages = packPages([notes], 100);
+    expect(pages).toHaveLength(1);
+    expect(pages[0]).toHaveLength(1);
+    expect(pages[0][0]).toMatchObject({ kind: "notes-lines", lines: 1 });
   });
 });

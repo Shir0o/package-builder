@@ -223,6 +223,7 @@ function snapshotData(type: BlockTypeKey, data: YBlockData | undefined): unknown
       const d: NotesData = {
         title: (data?.get("title") as Y.Text | undefined)?.toString() ?? "",
         lines: (data?.get("lines") as number | undefined) ?? 0,
+        autoLines: data?.get("autoLines") as boolean | undefined,
       };
       return d;
     }
@@ -431,6 +432,7 @@ function applyBlockData(
       const d = data as NotesData;
       syncYText(getOrCreateText(m, "title"), d.title);
       setIfChanged(m, "lines", d.lines);
+      setIfChanged(m, "autoLines", d.autoLines);
       return;
     }
     case "rule":
