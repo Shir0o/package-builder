@@ -218,6 +218,15 @@ export function DocumentPreview({ pkg, selectedId, onSelectBlock, interactive, p
   // the residual case auto-pagination can't fix, surfaced as a preview warning.
   const [overflowIds, setOverflowIds] = useState<Set<string>>(() => new Set());
 
+  const [debouncedFontSize, setDebouncedFontSize] = useState(pkg.fontSize);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedFontSize(pkg.fontSize);
+    }, 250);
+    return () => clearTimeout(t);
+  }, [pkg.fontSize]);
+
   // Measure each unit's rendered height, then pack into US-Letter-height pages.
   // Runs whenever the unit stream changes; re-runs once web fonts settle so
   // measurements reflect the real glyph metrics used in the PDF.
@@ -257,7 +266,7 @@ export function DocumentPreview({ pkg, selectedId, onSelectBlock, interactive, p
     return () => {
       cancelled = true;
     };
-  }, [units, interactive]);
+  }, [units, interactive, debouncedFontSize]);
 
   useEffect(() => {
     if (interactive && selectedId) {
@@ -293,7 +302,7 @@ export function DocumentPreview({ pkg, selectedId, onSelectBlock, interactive, p
               className="paper"
               data-page={currentPage}
               style={{
-                fontSize: pkg.fontSize !== undefined ? `${pkg.fontSize}pt` : undefined
+                fontSize: debouncedFontSize !== undefined ? `${debouncedFontSize}pt` : undefined
               }}
             >
               {pageUnits.map((u, ui) => {
@@ -386,7 +395,7 @@ export function DocumentPreview({ pkg, selectedId, onSelectBlock, interactive, p
             boxShadow: "none",
             zoom: 1,
             pointerEvents: "none",
-            fontSize: pkg.fontSize !== undefined ? `${pkg.fontSize}pt` : undefined,
+            fontSize: debouncedFontSize !== undefined ? `${debouncedFontSize}pt` : undefined,
           }}
         >
           {units.map((u, i) =>
