@@ -142,6 +142,7 @@ export function packPages(measured: MeasuredUnit[], pageHeight: number): RenderU
     if (m.split && m.split.lines > 0) {
       const total = m.split.lines;
       const { lineHeight } = m.split;
+      const slice = lineSlicer(u); // parses verse lines once, not per slice
       let offset = 0;
       while (offset < total) {
         let fit = Math.floor((remaining() + EPSILON) / lineHeight);
@@ -155,7 +156,7 @@ export function packPages(measured: MeasuredUnit[], pageHeight: number): RenderU
           fit = 1;
         }
         fit = Math.min(fit, total - offset);
-        current.push(sliceLineUnit(u, offset, fit));
+        current.push(slice(offset, fit));
         used += fit * lineHeight;
         offset += fit;
         if (offset < total) flush();
@@ -175,23 +176,29 @@ export function packPages(measured: MeasuredUnit[], pageHeight: number): RenderU
   return pages;
 }
 
-/** Produce the slice of a line-based unit covering `count` lines from `offset`. */
-function sliceLineUnit(u: RenderUnit, offset: number, count: number): RenderUnit {
-  const first = offset === 0;
+/**
+ * Build a slicer for a line-based unit. Verse text is parsed once here, then the
+ * returned function cheaply produces each page slice covering `count` lines from
+ * `offset`.
+ */
+function lineSlicer(u: RenderUnit): (offset: number, count: number) => RenderUnit {
   if (u.kind === "notes-lines") {
-    return { ...u, lines: count };
+    return (_offset, count) => ({ ...u, lines: count });
   }
   if (u.kind === "verse-group") {
     const allLines = parseVerseLines(u.group.text);
-    const taken = allLines.slice(offset, offset + count);
-    return {
-      kind: "verse-group",
-      blockId: u.blockId,
-      group: { ref: first ? u.group.ref : "", text: taken.map(serializeLine).join("\n") },
-      showRef: first && !!u.group.ref,
+    return (offset, count) => {
+      const first = offset === 0;
+      const taken = allLines.slice(offset, offset + count);
+      return {
+        kind: "verse-group",
+        blockId: u.blockId,
+        group: { ref: first ? u.group.ref : "", text: taken.map(serializeLine).join("\n") },
+        showRef: first && !!u.group.ref,
+      };
     };
   }
-  return u;
+  return () => u;
 }
 
 function serializeLine(l: { num: string | null; text: string }): string {

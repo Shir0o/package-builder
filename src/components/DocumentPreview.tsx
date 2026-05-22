@@ -167,18 +167,12 @@ function RenderUnitView({ unit }: { unit: RenderUnit }) {
       return <RenderBlock block={unit.block} />;
     case "verses-title":
       return (
-        <div className="doc-verse-group">
-          <div className="doc-h3" style={{ margin: "8pt 0 4pt" }}>
-            {unit.title}
-          </div>
+        <div className="doc-h3" style={{ margin: "8pt 0 4pt" }}>
+          {unit.title}
         </div>
       );
     case "verse-group":
-      return (
-        <div className="doc-verse-group">
-          <VerseGroupView refLabel={unit.showRef ? unit.group.ref : ""} text={unit.group.text} />
-        </div>
-      );
+      return <VerseGroupView refLabel={unit.showRef ? unit.group.ref : ""} text={unit.group.text} />;
     case "notes-title":
       return <div className="doc-notes-title">{unit.title}</div>;
     case "notes-lines":
@@ -303,7 +297,7 @@ export function DocumentPreview({ pkg, selectedId, onSelectBlock, interactive, p
                   editor && selectedId !== bid ? `2px dashed ${editor.user.color}` : null;
                 return (
                   <div
-                    key={ui}
+                    key={`${bid ?? "unit"}-${ui}`}
                     data-block-id={bid ?? undefined}
                     onClick={
                       interactive && bid
