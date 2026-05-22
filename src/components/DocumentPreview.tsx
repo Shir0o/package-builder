@@ -137,13 +137,29 @@ export function RenderBlock({ block }: { block: AnyBlock }) {
 
 function VerseGroupView({ refLabel, text }: { refLabel: string; text: string }) {
   const lines = parseVerseLines(text);
+  if (lines.length === 0 && refLabel) {
+    return (
+      <div style={{ margin: "6pt 0 10pt" }}>
+        <div className="doc-verse">
+          <div className="vnum" />
+          <div className="vtext">
+            <span className="doc-verse-ref">{refLabel}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div style={{ margin: "6pt 0 10pt" }}>
-      {refLabel ? <div className="doc-verse-ref">{refLabel}</div> : null}
       {lines.map((vl, j) => (
         <div key={j} className="doc-verse">
           <div className="vnum">{vl.num || ""}</div>
-          <div className="vtext">{vl.text}</div>
+          <div className="vtext">
+            {j === 0 && refLabel ? (
+              <span className="doc-verse-ref">{refLabel}</span>
+            ) : null}
+            {vl.text}
+          </div>
         </div>
       ))}
     </div>
