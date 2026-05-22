@@ -8,8 +8,6 @@ import { ScheduleEditor } from "./editors/ScheduleEditor";
 import { VersesEditor } from "./editors/VersesEditor";
 import { SongEditor } from "./editors/SongEditor";
 import { NotesEditor } from "./editors/NotesEditor";
-import { useYText } from "../lib/collabContext";
-import { useYTextInput } from "../lib/useYTextInput";
 
 type Props = {
   pkg: Package;
@@ -21,8 +19,6 @@ type Props = {
 };
 
 export function PropertiesPanel({ pkg, onPackageChange, block, onChange, onDelete, onDuplicate }: Props) {
-  const titleY = useYText(null, ["title"]);
-  const title = useYTextInput(titleY, pkg.title, (v) => onPackageChange({ title: v }, true));
 
   if (!block) {
     return <div className="right" />;

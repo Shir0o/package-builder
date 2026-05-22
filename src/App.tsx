@@ -726,6 +726,8 @@ export default function App() {
               className={`btn ghost tiny${settingsOpen ? " active" : ""}`}
               onClick={() => setSettingsOpen((o) => !o)}
               title="Document settings"
+              aria-haspopup="true"
+              aria-expanded={settingsOpen}
             >
               <Icons.Sliders size={14} /> Settings
             </button>
@@ -785,6 +787,7 @@ export default function App() {
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                       <label
+                        htmlFor="settings-font-size"
                         style={{
                           fontSize: 11,
                           fontFamily: "var(--mono-font)",
@@ -796,23 +799,24 @@ export default function App() {
                         Base Font Size
                       </label>
                       <span style={{ fontSize: 12, fontFamily: "var(--mono-font)", fontWeight: 500, color: "var(--ink)" }}>
-                        {(pkg.fontSize !== undefined ? pkg.fontSize : 12.5)}pt
+                        {(pkg.fontSize ?? 12.5)}pt
                       </span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <input
+                        id="settings-font-size"
                         type="range"
                         min={9}
                         max={16}
                         step={0.5}
-                        value={pkg.fontSize !== undefined ? pkg.fontSize : 12.5}
+                        value={pkg.fontSize ?? 12.5}
                         onChange={(e) => updatePackageSettings({ fontSize: parseFloat(e.target.value) }, true)}
                         style={{ flex: 1, cursor: "pointer" }}
                       />
                       <button
                         type="button"
                         className="btn tiny"
-                        disabled={(pkg.fontSize !== undefined ? pkg.fontSize : 12.5) === 12.5}
+                        disabled={(pkg.fontSize ?? 12.5) === 12.5}
                         onClick={() => updatePackageSettings({ fontSize: 12.5 }, false)}
                         style={{ flexShrink: 0 }}
                       >
