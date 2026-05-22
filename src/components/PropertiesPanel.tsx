@@ -35,7 +35,7 @@ export function PropertiesPanel({ pkg, onPackageChange, block, onChange, onDelet
         <div className="panel-body">
           <div className="field">
             <label>Document Title</label>
-            <input type="text" ref={title.ref} onChange={title.onChange} />
+            <input type="text" ref={title.ref} onChange={title.onChange} placeholder="Untitled Package" />
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>

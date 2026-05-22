@@ -184,7 +184,7 @@ export function DocumentPreview({ pkg, selectedId, onSelectBlock, interactive, p
               className="paper"
               data-page={currentPage}
               style={{
-                fontSize: pkg.fontSize ? `${pkg.fontSize}pt` : undefined
+                fontSize: pkg.fontSize !== undefined ? `${pkg.fontSize}pt` : undefined
               }}
             >
               {pageBlocks.map((b) => {
