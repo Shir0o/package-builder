@@ -322,8 +322,9 @@ export function DocumentPreview({ pkg, selectedId, onSelectBlock, interactive, p
                           }
                         : undefined
                     }
-                    style={
-                      interactive
+                    style={{
+                      display: "flow-root",
+                      ...(interactive
                         ? {
                             cursor: bid ? "pointer" : undefined,
                             outline:
@@ -335,8 +336,8 @@ export function DocumentPreview({ pkg, selectedId, onSelectBlock, interactive, p
                             transition: "outline-color .15s",
                             position: "relative",
                           }
-                        : undefined
-                    }
+                        : undefined)
+                    }}
                   >
                     {editor && interactive && (
                       <div
