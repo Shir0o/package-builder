@@ -177,6 +177,7 @@ export default function App() {
   }, []);
   const [toast, setToast] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [zoom, setZoom] = useState(1);
   const centerRef = useRef<HTMLElement | null>(null);
@@ -720,32 +721,113 @@ export default function App() {
               </button>
             </>
           )}
-          <label
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 12,
-              color: "var(--muted)",
-              padding: "0 8px",
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={!!pkg.pageNumbers}
-              onChange={(e) =>
-                pushState(
-                  (s) => ({
-                    ...s,
-                    pkg: { ...s.pkg, pageNumbers: e.target.checked },
-                  }),
-                  "toggle-page-numbers",
-                  false
-                )
-              }
-            />
-            Page #s
-          </label>
+          <div className="menu-wrap" style={{ display: "inline-block" }}>
+            <button
+              className={`btn ghost tiny${settingsOpen ? " active" : ""}`}
+              onClick={() => setSettingsOpen((o) => !o)}
+              title="Document settings"
+              aria-haspopup="true"
+              aria-expanded={settingsOpen}
+            >
+              <Icons.Sliders size={14} /> Settings
+            </button>
+            {settingsOpen && (
+              <>
+                <div
+                  style={{ position: "fixed", inset: 0, zIndex: 40 }}
+                  onClick={() => setSettingsOpen(false)}
+                />
+                <div
+                  className="menu"
+                  style={{
+                    width: 280,
+                    padding: 16,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 14,
+                    right: 0,
+                    textAlign: "left",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: 600,
+                      fontSize: 13,
+                      borderBottom: "1px solid var(--line)",
+                      paddingBottom: 8,
+                      marginBottom: 4,
+                      color: "var(--ink)",
+                    }}
+                  >
+                    Document Settings
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      id="settings-page-numbers"
+                      checked={!!pkg.pageNumbers}
+                      onChange={(e) => updatePackageSettings({ pageNumbers: e.target.checked }, false)}
+                      style={{ width: 16, height: 16, cursor: "pointer" }}
+                    />
+                    <label
+                      htmlFor="settings-page-numbers"
+                      style={{
+                        fontSize: 13,
+                        color: "var(--ink)",
+                        cursor: "pointer",
+                        userSelect: "none",
+                        fontFamily: "var(--main-font)",
+                      }}
+                    >
+                      Show Page Numbers
+                    </label>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                      <label
+                        htmlFor="settings-font-size"
+                        style={{
+                          fontSize: 11,
+                          fontFamily: "var(--mono-font)",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.06em",
+                          color: "var(--muted)",
+                        }}
+                      >
+                        Base Font Size
+                      </label>
+                      <span style={{ fontSize: 12, fontFamily: "var(--mono-font)", fontWeight: 500, color: "var(--ink)" }}>
+                        {(pkg.fontSize ?? 12.5)}pt
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <input
+                        id="settings-font-size"
+                        type="range"
+                        min={9}
+                        max={16}
+                        step={0.5}
+                        value={pkg.fontSize ?? 12.5}
+                        onChange={(e) => updatePackageSettings({ fontSize: parseFloat(e.target.value) }, true)}
+                        style={{ flex: 1, cursor: "pointer" }}
+                      />
+                      <button
+                        type="button"
+                        className="btn tiny"
+                        disabled={(pkg.fontSize ?? 12.5) === 12.5}
+                        onClick={() => updatePackageSettings({ fontSize: 12.5 }, false)}
+                        style={{ flexShrink: 0 }}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
           <div className="menu-wrap">
             <button className="btn" onClick={() => setMenuOpen((o) => !o)}>
               <Icons.Down2 size={13} /> Export <Icons.Chevron size={12} />

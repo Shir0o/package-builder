@@ -69,7 +69,8 @@ export function exportMarkdown(pkg: Package) {
       case "notes": {
         const d = b.data;
         lines.push(`### ${d.title}\n`);
-        for (let i = 0; i < d.lines; i++)
+        const noteLines = d.autoLines !== false ? (d.lines || 28) : d.lines;
+        for (let i = 0; i < noteLines; i++)
           lines.push("_________________________________________________");
         lines.push("");
         break;

@@ -13,7 +13,7 @@ export type VerseGroup = { ref: string; text: string };
 export type VersesData = { title: string; groups: VerseGroup[] };
 export type Stanza = { type: "verse" | "chorus"; text: string };
 export type SongData = { title: string; stanzas: Stanza[] };
-export type NotesData = { title: string; lines: number };
+export type NotesData = { title: string; lines: number; autoLines?: boolean };
 
 export type BlockTypeKey =
   | "cover"

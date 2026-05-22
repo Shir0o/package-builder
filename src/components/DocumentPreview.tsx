@@ -137,13 +137,29 @@ export function RenderBlock({ block }: { block: AnyBlock }) {
 
 function VerseGroupView({ refLabel, text }: { refLabel: string; text: string }) {
   const lines = parseVerseLines(text);
+  if (lines.length === 0 && refLabel) {
+    return (
+      <div style={{ margin: "6pt 0 10pt" }}>
+        <div className="doc-verse">
+          <div className="vnum" />
+          <div className="vtext">
+            <span className="doc-verse-ref">{refLabel}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div style={{ margin: "6pt 0 10pt" }}>
-      {refLabel ? <div className="doc-verse-ref">{refLabel}</div> : null}
       {lines.map((vl, j) => (
         <div key={j} className="doc-verse">
           <div className="vnum">{vl.num || ""}</div>
-          <div className="vtext">{vl.text}</div>
+          <div className="vtext">
+            {j === 0 && refLabel ? (
+              <span className="doc-verse-ref">{refLabel}</span>
+            ) : null}
+            {vl.text}
+          </div>
         </div>
       ))}
     </div>
@@ -218,6 +234,15 @@ export function DocumentPreview({ pkg, selectedId, onSelectBlock, interactive, p
   // the residual case auto-pagination can't fix, surfaced as a preview warning.
   const [overflowIds, setOverflowIds] = useState<Set<string>>(() => new Set());
 
+  const [debouncedFontSize, setDebouncedFontSize] = useState(pkg.fontSize);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedFontSize(pkg.fontSize);
+    }, 250);
+    return () => clearTimeout(t);
+  }, [pkg.fontSize]);
+
   // Measure each unit's rendered height, then pack into US-Letter-height pages.
   // Runs whenever the unit stream changes; re-runs once web fonts settle so
   // measurements reflect the real glyph metrics used in the PDF.
@@ -257,7 +282,7 @@ export function DocumentPreview({ pkg, selectedId, onSelectBlock, interactive, p
     return () => {
       cancelled = true;
     };
-  }, [units, interactive]);
+  }, [units, interactive, debouncedFontSize]);
 
   useEffect(() => {
     if (interactive && selectedId) {
@@ -293,7 +318,7 @@ export function DocumentPreview({ pkg, selectedId, onSelectBlock, interactive, p
               className="paper"
               data-page={currentPage}
               style={{
-                fontSize: pkg.fontSize !== undefined ? `${pkg.fontSize}pt` : undefined
+                fontSize: debouncedFontSize !== undefined ? `${debouncedFontSize}pt` : undefined
               }}
             >
               {pageUnits.map((u, ui) => {
@@ -313,8 +338,9 @@ export function DocumentPreview({ pkg, selectedId, onSelectBlock, interactive, p
                           }
                         : undefined
                     }
-                    style={
-                      interactive
+                    style={{
+                      display: "flow-root",
+                      ...(interactive
                         ? {
                             cursor: bid ? "pointer" : undefined,
                             outline:
@@ -326,8 +352,8 @@ export function DocumentPreview({ pkg, selectedId, onSelectBlock, interactive, p
                             transition: "outline-color .15s",
                             position: "relative",
                           }
-                        : undefined
-                    }
+                        : undefined)
+                    }}
                   >
                     {editor && interactive && (
                       <div
@@ -386,7 +412,7 @@ export function DocumentPreview({ pkg, selectedId, onSelectBlock, interactive, p
             boxShadow: "none",
             zoom: 1,
             pointerEvents: "none",
-            fontSize: pkg.fontSize !== undefined ? `${pkg.fontSize}pt` : undefined,
+            fontSize: debouncedFontSize !== undefined ? `${debouncedFontSize}pt` : undefined,
           }}
         >
           {units.map((u, i) =>

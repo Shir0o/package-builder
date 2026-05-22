@@ -42,7 +42,7 @@ export type RenderUnit =
       showRef: boolean;
     }
   | { kind: "notes-title"; blockId: string; title: string }
-  | { kind: "notes-lines"; blockId: string; lines: number };
+  | { kind: "notes-lines"; blockId: string; lines: number; autoLines?: boolean };
 
 /** Sentinel emitted for explicit page breaks and for blocks that own a page. */
 export type FlattenedUnit =
@@ -79,6 +79,7 @@ export function flattenToUnits(blocks: AnyBlock[]): FlattenedUnit[] {
           kind: "notes-lines",
           blockId: b.id,
           lines: d.lines || DEFAULT_NOTES_LINES,
+          autoLines: d.autoLines !== false,
         });
         break;
       }
@@ -127,6 +128,24 @@ export function packPages(measured: MeasuredUnit[], pageHeight: number): RenderU
     if (u.kind === "standalone") {
       flush();
       pages.push([{ kind: "block", block: u.block }]);
+      continue;
+    }
+
+    if (u.kind === "notes-lines" && u.autoLines) {
+      const lineHeight = m.split?.lineHeight || (u.lines > 0 ? m.height / u.lines : 20);
+      let fit = Math.floor((remaining() + EPSILON) / lineHeight);
+      if (fit <= 0) {
+        if (current.length) {
+          flush();
+          fit = Math.floor((remaining() + EPSILON) / lineHeight);
+        } else {
+          fit = 1;
+        }
+      }
+      if (fit > 0) {
+        current.push({ ...u, lines: fit });
+        used += fit * lineHeight;
+      }
       continue;
     }
 

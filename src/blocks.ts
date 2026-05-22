@@ -56,8 +56,8 @@ export const BLOCK_TYPES: Registry = {
   notes: {
     label: "Notes",
     desc: "Lined writing space",
-    create: () => ({ title: "Notes", lines: DEFAULT_NOTES_LINES }),
-    summary: (d) => `${d.title || "Notes"} · ${d.lines} lines`,
+    create: () => ({ title: "Notes", lines: DEFAULT_NOTES_LINES, autoLines: true }),
+    summary: (d) => `${d.title || "Notes"} · ${d.autoLines !== false ? "Auto lines" : `${d.lines} lines`}`,
   },
   rule: {
     label: "Divider",

@@ -80,7 +80,8 @@ export function exportText(pkg: Package) {
       case "notes": {
         const d = b.data;
         lines.push(d.title);
-        for (let i = 0; i < d.lines; i++)
+        const noteLines = d.autoLines !== false ? (d.lines || 28) : d.lines;
+        for (let i = 0; i < noteLines; i++)
           lines.push("  __________________________________________________");
         lines.push("");
         break;

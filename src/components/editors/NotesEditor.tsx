@@ -19,15 +19,35 @@ export function NotesEditor({ blockId, data, set }: Props) {
         <input type="text" ref={title.ref} onChange={title.onChange} />
       </div>
       <div className="field">
-        <label>Number of lines · {data.lines}</label>
-        <input
-          type="range"
-          min={2}
-          max={40}
-          value={data.lines}
-          onChange={(e) => set({ lines: Number(e.target.value) })}
-        />
+        <label>Lines Mode</label>
+        <select
+          value={data.autoLines !== false ? "auto" : "manual"}
+          onChange={(e) => {
+            const isAuto = e.target.value === "auto";
+            set({ autoLines: isAuto });
+          }}
+        >
+          <option value="auto">Auto (Prefill Page)</option>
+          <option value="manual">Manual (Set Line Count)</option>
+        </select>
+        {data.autoLines !== false && (
+          <span className="hint">
+            Prefills the remaining height of the page up to the cut-off.
+          </span>
+        )}
       </div>
+      {data.autoLines === false && (
+        <div className="field">
+          <label>Number of lines · {data.lines}</label>
+          <input
+            type="range"
+            min={2}
+            max={40}
+            value={data.lines}
+            onChange={(e) => set({ lines: Number(e.target.value) })}
+          />
+        </div>
+      )}
     </>
   );
 }
