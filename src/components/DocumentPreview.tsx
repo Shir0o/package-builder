@@ -289,7 +289,13 @@ export function DocumentPreview({ pkg, selectedId, onSelectBlock, interactive, p
         const currentPage = pageNum;
         return (
           <React.Fragment key={pi}>
-            <div className="paper" data-page={currentPage}>
+            <div
+              className="paper"
+              data-page={currentPage}
+              style={{
+                fontSize: pkg.fontSize !== undefined ? `${pkg.fontSize}pt` : undefined
+              }}
+            >
               {pageUnits.map((u, ui) => {
                 const bid = unitBlockId(u);
                 const editor = bid ? editorsByBlock.get(bid) : undefined;
@@ -380,6 +386,7 @@ export function DocumentPreview({ pkg, selectedId, onSelectBlock, interactive, p
             boxShadow: "none",
             zoom: 1,
             pointerEvents: "none",
+            fontSize: pkg.fontSize !== undefined ? `${pkg.fontSize}pt` : undefined,
           }}
         >
           {units.map((u, i) =>

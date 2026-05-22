@@ -137,11 +137,12 @@ function setIfChanged<T>(parent: Y.Map<unknown>, key: string, value: T) {
 export function snapshotPackage(root: YPackageRoot): Package {
   const title = (root.get("title") as Y.Text | undefined)?.toString() ?? "";
   const pageNumbers = (root.get("pageNumbers") as boolean | undefined) ?? false;
+  const fontSize = root.get("fontSize") as number | undefined;
   const blocksY = root.get("blocks") as Y.Array<YBlock> | undefined;
   const blocks: AnyBlock[] = blocksY
     ? blocksY.toArray().map((b) => snapshotBlock(b)).filter((b): b is AnyBlock => b !== null)
     : [];
-  return { title, pageNumbers, blocks };
+  return { title, pageNumbers, fontSize, blocks };
 }
 
 function snapshotBlock(yb: YBlock): AnyBlock | null {
@@ -237,6 +238,7 @@ export function applyPackageToYDoc(root: YPackageRoot, pkg: Package) {
   const titleY = getOrCreateText(root, "title");
   syncYText(titleY, pkg.title);
   setIfChanged(root, "pageNumbers", pkg.pageNumbers);
+  setIfChanged(root, "fontSize", pkg.fontSize);
 
   let blocksY = root.get("blocks") as Y.Array<YBlock> | undefined;
   if (!blocksY) {

@@ -476,6 +476,24 @@ export default function App() {
     );
   }, [pushState]);
 
+  const updatePackageSettings = useCallback(
+    (patch: Partial<Omit<Package, "blocks">>, isContinuous = true) => {
+      pushState(
+        (s) => ({
+          ...s,
+          pkg: { ...s.pkg, ...patch },
+        }),
+        patch.title !== undefined
+          ? "edit-title"
+          : patch.pageNumbers !== undefined
+          ? "toggle-page-numbers"
+          : "edit-font-size",
+        isContinuous
+      );
+    },
+    [pushState]
+  );
+
   const newPackage = useCallback(() => {
     if (
       !confirm(
@@ -868,6 +886,8 @@ export default function App() {
       </div>
 
       <PropertiesPanel
+        pkg={pkg}
+        onPackageChange={updatePackageSettings}
         block={selected}
         onChange={updateBlock}
         onDelete={deleteBlock}

@@ -49,5 +49,6 @@ export type AnyBlock = { [K in BlockTypeKey]: Block<K> }[BlockTypeKey];
 export type Package = {
   title: string;
   pageNumbers: boolean;
+  fontSize?: number;
   blocks: AnyBlock[];
 };

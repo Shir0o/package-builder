@@ -39,6 +39,7 @@ function isPackage(value: unknown): value is Package {
   const v = value as Record<string, unknown>;
   if (typeof v.title !== "string") return false;
   if (typeof v.pageNumbers !== "boolean") return false;
+  if (v.fontSize !== undefined && typeof v.fontSize !== "number") return false;
   if (!Array.isArray(v.blocks)) return false;
   return v.blocks.every(
     (b) =>
