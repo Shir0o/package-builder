@@ -15,7 +15,7 @@ body { margin: 0; font-family: 'Source Serif 4', 'Charter', Georgia, serif; back
 .doc-p { margin: 0 0 0.72em; }
 .doc-center { text-align: center; }
 .doc-rule { border: none; border-top: 0.75pt solid #c8c2b6; margin: 1.28em auto; width: 80%; }
-.doc-cover { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 9.3in; text-align: center; gap: 1.12em; }
+.doc-cover { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 9in; text-align: center; gap: 1.12em; }
 .doc-cover .eyebrow { font-family: 'Geist Mono', monospace; font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.16em; color: #777; }
 .doc-cover .title { font-size: 2.56em; font-weight: 600; letter-spacing: -0.02em; line-height: 1.05; max-width: 6in; }
 .doc-cover .subtitle { font-size: 1.12em; color: #555; font-style: italic; max-width: 5.5in; }
@@ -26,12 +26,12 @@ body { margin: 0; font-family: 'Source Serif 4', 'Charter', Georgia, serif; back
 .doc-schedule th { font-weight: 600; font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.06em; color: #555; border-bottom: 1pt solid #1a1815; }
 .doc-schedule td.num { font-family: 'Geist Mono', monospace; font-size: 0.8em; color: #777; width: 0.4in; padding-top: 0.72em; }
 .doc-schedule td.when { text-align: right; white-space: nowrap; font-family: 'Geist Mono', monospace; font-size: 0.8em; color: #444; }
-.doc-verse-group { margin: 0.8em 0 1.12em; }
+.doc-verse-group { margin: 0.8em 0 1.12em; page-break-inside: avoid; break-inside: avoid; }
 .doc-verse-ref { font-weight: 600; font-size: 0.92em; margin: 0.64em 0 0.16em; }
 .doc-verse { display: grid; grid-template-columns: 1.28em 1fr; gap: 0.32em; margin: 0.08em 0; }
 .doc-verse .vnum { text-align: right; font-size: 0.72em; color: #777; padding-top: 0.24em; }
 .doc-notes-title { font-weight: 600; font-size: 0.96em; margin: 1.12em 0 0.64em; }
-.doc-notes-line { border-bottom: 0.5pt solid #c8c2b6; height: 1.76em; }
+.doc-notes-line { border-bottom: 0.5pt solid #c8c2b6; height: 1.6em; }
 .doc-song-title { font-weight: 600; font-size: 1.04em; margin: 1.12em 0 0.64em; }
 .doc-song { margin: 0.32em 0 1.12em; }
 .doc-song-stanza { display: grid; grid-template-columns: 1.44em 1fr; column-gap: 0.32em; margin: 0 0 0.8em; page-break-inside: avoid; }
