@@ -180,7 +180,13 @@ export function DocumentPreview({ pkg, selectedId, onSelectBlock, interactive, p
         const currentPage = pageNum;
         return (
           <React.Fragment key={pi}>
-            <div className="paper" data-page={currentPage}>
+            <div
+              className="paper"
+              data-page={currentPage}
+              style={{
+                fontSize: pkg.fontSize ? `${pkg.fontSize}pt` : undefined
+              }}
+            >
               {pageBlocks.map((b) => {
                 const editor = editorsByBlock.get(b.id);
                 const peerOutline =

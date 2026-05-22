@@ -13,7 +13,7 @@ describe("storage", () => {
   });
 
   it("round-trips through savePackage / loadPackage", () => {
-    const pkg = { title: "X", pageNumbers: false, blocks: [] };
+    const pkg = { title: "X", pageNumbers: false, fontSize: 13.5, blocks: [] };
     savePackage(pkg);
     expect(JSON.parse(localStorage.getItem(KEY) as string)).toEqual(pkg);
     expect(loadPackage()).toEqual(pkg);

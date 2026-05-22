@@ -1,4 +1,4 @@
-import type { AnyBlock } from "../types";
+import type { AnyBlock, Package } from "../types";
 import { BLOCK_TYPES } from "../blocks";
 import { Icons } from "../icons";
 import { CoverEditor } from "./editors/CoverEditor";
@@ -8,30 +8,92 @@ import { ScheduleEditor } from "./editors/ScheduleEditor";
 import { VersesEditor } from "./editors/VersesEditor";
 import { SongEditor } from "./editors/SongEditor";
 import { NotesEditor } from "./editors/NotesEditor";
+import { useYText } from "../lib/collabContext";
+import { useYTextInput } from "../lib/useYTextInput";
 
 type Props = {
+  pkg: Package;
+  onPackageChange: (patch: Partial<Omit<Package, "blocks">>, isContinuous?: boolean) => void;
   block: AnyBlock | null;
   onChange: (next: AnyBlock) => void;
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
 };
 
-export function PropertiesPanel({ block, onChange, onDelete, onDuplicate }: Props) {
+export function PropertiesPanel({ pkg, onPackageChange, block, onChange, onDelete, onDuplicate }: Props) {
+  const titleY = useYText(null, ["title"]);
+  const title = useYTextInput(titleY, pkg.title, (v) => onPackageChange({ title: v }, true));
+
   if (!block) {
+    const currentSize = pkg.fontSize !== undefined ? pkg.fontSize : 12.5;
+
     return (
       <div className="right">
         <div className="panel-header">
-          <div className="title">No selection</div>
+          <div className="title">Document Settings</div>
         </div>
         <div className="panel-body">
-          <div style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.5 }}>
-            Pick a block from the left, or click any element in the preview to edit it.
+          <div className="field">
+            <label>Document Title</label>
+            <input type="text" ref={title.ref} onChange={title.onChange} />
           </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
+            <input
+              type="checkbox"
+              id="prop-page-numbers"
+              checked={!!pkg.pageNumbers}
+              onChange={(e) => onPackageChange({ pageNumbers: e.target.checked }, false)}
+              style={{ width: 16, height: 16, cursor: "pointer" }}
+            />
+            <label
+              htmlFor="prop-page-numbers"
+              style={{
+                fontSize: 13,
+                color: "var(--ink)",
+                cursor: "pointer",
+                userSelect: "none",
+                fontFamily: "var(--main-font)"
+              }}
+            >
+              Show Page Numbers
+            </label>
+          </div>
+
+          <div className="field">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
+              <label>Base Font Size</label>
+              <span style={{ fontSize: 12, fontFamily: "var(--mono-font)", fontWeight: 500, color: "var(--ink)" }}>
+                {currentSize}pt
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <input
+                type="range"
+                min={9}
+                max={16}
+                step={0.5}
+                value={currentSize}
+                onChange={(e) => onPackageChange({ fontSize: parseFloat(e.target.value) }, true)}
+                style={{ flex: 1, cursor: "pointer" }}
+              />
+              <button
+                type="button"
+                className="btn tiny"
+                disabled={currentSize === 12.5}
+                onClick={() => onPackageChange({ fontSize: 12.5 }, false)}
+                style={{ flexShrink: 0 }}
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+
           <div
             style={{
               borderTop: "1px solid var(--line-2)",
               paddingTop: 16,
-              marginTop: 8,
+              marginTop: 16,
             }}
           >
             <div

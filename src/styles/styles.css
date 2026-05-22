@@ -374,7 +374,7 @@ textarea { resize: vertical; }
   left: 0;
   right: 0;
   text-align: center;
-  font-size: 10pt;
+  font-size: 0.8em;
   color: #777;
   font-family: var(--doc-font);
 }
@@ -599,7 +599,7 @@ textarea { resize: vertical; }
 
 /* === Document content rendering (mirrored for paper + export) === */
 .doc-h1 {
-  font-size: 22pt;
+  font-size: 1.76em;
   font-weight: 600;
   letter-spacing: -0.01em;
   margin: 0 0 6pt;
@@ -607,13 +607,13 @@ textarea { resize: vertical; }
   line-height: 1.2;
 }
 .doc-h2 {
-  font-size: 15pt;
+  font-size: 1.2em;
   font-weight: 600;
   margin: 18pt 0 6pt;
   letter-spacing: -0.005em;
 }
 .doc-h3 {
-  font-size: 12pt;
+  font-size: 0.96em;
   font-weight: 600;
   margin: 14pt 0 4pt;
   text-transform: uppercase;
@@ -641,20 +641,20 @@ textarea { resize: vertical; }
 }
 .doc-cover .eyebrow {
   font-family: var(--mono-font);
-  font-size: 10pt;
+  font-size: 0.8em;
   text-transform: uppercase;
   letter-spacing: 0.16em;
   color: #777;
 }
 .doc-cover .title {
-  font-size: 32pt;
+  font-size: 2.56em;
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1.05;
   max-width: 6in;
 }
 .doc-cover .subtitle {
-  font-size: 14pt;
+  font-size: 1.12em;
   color: #555;
   font-style: italic;
   max-width: 5.5in;
@@ -662,7 +662,7 @@ textarea { resize: vertical; }
 .doc-cover .dateline {
   margin-top: 28pt;
   font-family: var(--mono-font);
-  font-size: 10pt;
+  font-size: 0.8em;
   letter-spacing: 0.06em;
   color: #555;
 }
@@ -677,7 +677,7 @@ textarea { resize: vertical; }
   width: 100%;
   border-collapse: collapse;
   margin: 8pt 0 12pt;
-  font-size: 11pt;
+  font-size: 0.88em;
 }
 .doc-schedule th, .doc-schedule td {
   text-align: left;
@@ -687,7 +687,7 @@ textarea { resize: vertical; }
 }
 .doc-schedule th {
   font-weight: 600;
-  font-size: 10pt;
+  font-size: 0.8em;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: #555;
@@ -696,7 +696,7 @@ textarea { resize: vertical; }
 }
 .doc-schedule td.num {
   font-family: var(--mono-font);
-  font-size: 10pt;
+  font-size: 0.8em;
   color: #777;
   width: 0.4in;
   padding-top: 9pt;
@@ -705,7 +705,7 @@ textarea { resize: vertical; }
   text-align: right;
   white-space: nowrap;
   font-family: var(--mono-font);
-  font-size: 10pt;
+  font-size: 0.8em;
   color: #444;
 }
 
@@ -713,7 +713,7 @@ textarea { resize: vertical; }
 .doc-verse-group { margin: 10pt 0 14pt; }
 .doc-verse-ref {
   font-weight: 600;
-  font-size: 11.5pt;
+  font-size: 0.92em;
   margin: 8pt 0 2pt;
 }
 .doc-verse {
@@ -724,7 +724,7 @@ textarea { resize: vertical; }
 }
 .doc-verse .vnum {
   text-align: right;
-  font-size: 9pt;
+  font-size: 0.72em;
   color: #777;
   padding-top: 3pt;
   font-variant-numeric: lining-nums;
@@ -734,7 +734,7 @@ textarea { resize: vertical; }
 /* Notes / lines block */
 .doc-notes-title {
   font-weight: 600;
-  font-size: 12pt;
+  font-size: 0.96em;
   margin: 14pt 0 8pt;
 }
 .doc-notes-line {
@@ -745,7 +745,7 @@ textarea { resize: vertical; }
 /* Song rendering — the killer feature */
 .doc-song-title {
   font-weight: 600;
-  font-size: 13pt;
+  font-size: 1.04em;
   margin: 14pt 0 8pt;
 }
 .doc-song { margin: 4pt 0 14pt; }
@@ -758,13 +758,13 @@ textarea { resize: vertical; }
   break-inside: avoid;
 }
 .doc-song-stanza .vnum {
-  font-size: 11pt;
+  font-size: 0.88em;
   color: #1a1815;
   padding-top: 0;
 }
 .doc-song-stanza .lines {
   white-space: pre-wrap;
-  font-size: 11.5pt;
+  font-size: 0.92em;
   line-height: 1.42;
 }
 .doc-song-stanza.chorus {

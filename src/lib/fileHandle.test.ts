@@ -118,6 +118,22 @@ describe("fileHandle", () => {
       });
       await expect(readPackageFromHandle(h)).rejects.toThrow(/Invalid package/);
     });
+    it("parses a package with a valid fontSize", async () => {
+      const pkg: Package = {
+        title: "X",
+        pageNumbers: true,
+        fontSize: 14.5,
+        blocks: [],
+      };
+      const h = makeHandle({ text: JSON.stringify(pkg) });
+      expect(await readPackageFromHandle(h)).toEqual(pkg);
+    });
+    it("throws when fontSize is the wrong type", async () => {
+      const h = makeHandle({
+        text: JSON.stringify({ title: "X", pageNumbers: true, fontSize: "12pt", blocks: [] }),
+      });
+      await expect(readPackageFromHandle(h)).rejects.toThrow(/Invalid package/);
+    });
     it("throws when a block is malformed", async () => {
       const h = makeHandle({
         text: JSON.stringify({

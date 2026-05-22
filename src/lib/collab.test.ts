@@ -89,6 +89,18 @@ describe("applyPackageToYDoc / snapshotPackage round-trip", () => {
     expect(snapshotPackage(root)).toEqual(pkg);
   });
 
+  it("round-trips a package with custom fontSize", () => {
+    const { doc, root } = freshRoot();
+    const pkg: Package = {
+      title: "Hello",
+      pageNumbers: true,
+      fontSize: 14.5,
+      blocks: [],
+    };
+    doc.transact(() => applyPackageToYDoc(root, pkg));
+    expect(snapshotPackage(root)).toEqual(pkg);
+  });
+
   it("round-trips a cover block", () => {
     const { doc, root } = freshRoot();
     const pkg: Package = {
