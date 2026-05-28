@@ -12,15 +12,15 @@
     "coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "y-indexeddb": "^9.0.12",
     "y-webrtc": "^10.3.0",
     "yjs": "^13.6.30"
   },
   "devDependencies": {
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.3.4",
     "@vitest/coverage-v8": "^4.1.7",
     "jsdom": "^29.1.1",
