@@ -93,6 +93,7 @@ textarea { resize: vertical; }
   gap: 8px;
   font-weight: 600;
   letter-spacing: -0.01em;
+  flex-shrink: 0;
 }
 .topbar .brand .mark {
   width: 22px; height: 22px;
@@ -130,8 +131,10 @@ textarea { resize: vertical; }
   font-family: var(--mono-font);
   font-size: 11px;
   color: var(--muted);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
-.topbar .actions { display: flex; gap: 6px; align-items: center; }
+.topbar .actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
 
 .btn {
   display: inline-flex;
@@ -1117,3 +1120,39 @@ textarea { resize: vertical; }
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
+
+/* === Responsive Topbar Adjustments === */
+@media (max-width: 1200px) {
+  /* On medium screens, make settings button compact and hide redundant print button */
+  .topbar button.btn.primary {
+    display: none;
+  }
+  .topbar .menu-wrap button.btn.ghost.tiny {
+    font-size: 0;
+    padding: 6px;
+    width: 30px;
+    height: 30px;
+    justify-content: center;
+  }
+  .topbar .menu-wrap button.btn.ghost.tiny svg {
+    margin: 0;
+  }
+}
+
+@media (max-width: 1000px) {
+  /* On smaller screens, hide brand text and meta text to give title and undo/redo maximum room */
+  .topbar .brand span {
+    display: none;
+  }
+  .topbar .meta {
+    display: none;
+  }
+}
+
+@media (max-width: 850px) {
+  /* On very small screens, hide secondary textual topbar buttons */
+  .topbar .btn.ghost.tiny:not(.icon) {
+    display: none;
+  }
+}
+
