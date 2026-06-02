@@ -25,18 +25,24 @@ To keep your work safe when collaborating:
 
 ## Develop
 
+### Prerequisites
+- **Node.js**: Version `20.x` or higher is recommended.
+- **npm**: Standard Node Package Manager.
+
+### Setup & Commands
 ```bash
-npm install
-npm run dev      # vite dev server
-npm test         # vitest
-npm run build    # production build to dist/
+npm install          # Install dependencies
+npm run dev          # Start the local Vite development server
+npm test             # Run test suite with Vitest
+npm run coverage     # Generate code coverage reports
+npm run build        # Build optimized production bundle to dist/
 ```
 
 ## Collaboration & Deployment
 
 This application supports real-time, peer-to-peer collaboration using WebRTC. While editing data is synced directly between browsers, an initial handshake requires a lightweight signaling server.
 
-For detailed steps on deploying the static frontend, hosting your own signaling server, and using environment/runtime overrides, see the [Deployment & Self-Hosting Guide](DEPLOY.md).
+For detailed steps on deploying the static frontend, hosting your own signaling server, and using environment/runtime overrides, see the [Production Deployment Guide](DEPLOY.md).
 
 ### Quick Start: Local Signaling Server
 If public signaling servers are down or blocked by your browser, you can run your own local signaling server for testing:
@@ -46,8 +52,13 @@ PORT=4444 node ./node_modules/y-webrtc/bin/server.js
 
 ### Production Deployments
 * **Frontend**: Build the static assets via `npm run build` and host the `dist/` folder on Cloudflare Pages, Netlify, GitHub Pages, or Vercel.
-* **Signaling Server**: Run the provided `Dockerfile` on any container platform (Render, Fly.io, Railway).
+* **Signaling Server**: Run the provided `Dockerfile` on any container platform (Render, Fly.io, Railway, Google Cloud Run).
+
+## Contributing
+
+We welcome community contributions! Please read our [Contributing Guide](CONTRIBUTING.md) to understand our development workflows, coding standards, and testing expectations.
 
 ## License
 
 [MIT](LICENSE)
+
