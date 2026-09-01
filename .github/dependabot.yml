@@ -1,7 +1,7 @@
 version: 2
 updates:
   - package-ecosystem: npm
-    directory: "/"
+    directory: /
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
@@ -10,10 +10,12 @@ updates:
         dependency-type: development
       production-dependencies:
         dependency-type: production
+
   - package-ecosystem: github-actions
-    directory: "/"
+    directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
     groups:
       actions:
         patterns:
