@@ -33,7 +33,7 @@ export function RenderBlock({ block }: { block: AnyBlock }) {
     case "heading": {
       const d = block.data;
       const cls = `doc-h${d.level || 2}` + (d.align === "center" ? " doc-center" : "");
-      const Tag = `h${d.level || 2}` as keyof JSX.IntrinsicElements;
+      const Tag = `h${d.level || 2}` as keyof React.JSX.IntrinsicElements;
       return React.createElement(Tag, { className: cls }, d.text);
     }
     case "paragraph": {
