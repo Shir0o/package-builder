@@ -737,18 +737,7 @@ export default function App() {
                   style={{ position: "fixed", inset: 0, zIndex: 40 }}
                   onClick={() => setSettingsOpen(false)}
                 />
-                <div
-                  className="menu"
-                  style={{
-                    width: 280,
-                    padding: 16,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 14,
-                    right: 0,
-                    textAlign: "left",
-                  }}
-                >
+                <div className="menu settings-menu">
                   <div
                     style={{
                       fontWeight: 600,

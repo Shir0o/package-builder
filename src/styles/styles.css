@@ -171,6 +171,7 @@ textarea { resize: vertical; }
   border: 1px solid var(--line);
   border-radius: 8px;
   min-width: 220px;
+  max-width: calc(100vw - 16px);
   padding: 6px;
   box-shadow: var(--shadow);
   z-index: 50;
@@ -194,6 +195,14 @@ textarea { resize: vertical; }
   color: var(--muted);
 }
 .menu .sep { height: 1px; background: var(--line); margin: 6px 4px; }
+.menu.settings-menu {
+  width: 280px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: left;
+}
 
 /* === Left: block list === */
 .left {
@@ -1154,6 +1163,32 @@ textarea { resize: vertical; }
   /* On very small screens, hide secondary textual topbar buttons */
   .topbar .actions > button.btn.ghost.tiny:not(.icon) {
     display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  /* Phone-width viewports: the topbar dropdowns anchor to their trigger
+     button, which sits too far left for a 280px settings panel — it clipped
+     off the left edge. Pin both menus to the viewport's right edge with a
+     safe margin instead. */
+  .menu {
+    position: fixed;
+    top: 58px;
+    right: 8px;
+    left: auto;
+    min-width: 0;
+    max-width: calc(100vw - 16px);
+  }
+  .menu.settings-menu {
+    width: min(280px, calc(100vw - 16px));
+  }
+
+  /* The zoom bar centers on the document pane, which is only ~55px wide here
+     (fixed side panels), so it overflowed the right edge. Center it in the
+     viewport and keep it inside the safe margins. */
+  .zoom-bar {
+    left: 50%;
+    max-width: calc(100vw - 16px);
   }
 }
 
