@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/Shir0o/package-builder/compare/v0.2.0...v0.2.1) (2026-11-12)
+
+
+### Bug Fixes
+
+* **ci:** pin googleapis/release-please-action SHA (alert [#3](https://github.com/Shir0o/package-builder/issues/3)) ([#69](https://github.com/Shir0o/package-builder/issues/69)) ([f19c4e4](https://github.com/Shir0o/package-builder/commit/f19c4e48938576f25e3d1b066c30a707259242bc))
+
 ## [0.2.0](https://github.com/Shir0o/package-builder/compare/v0.1.0...v0.2.0) (2026-11-11)
 
 
