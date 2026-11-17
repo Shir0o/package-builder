@@ -16,9 +16,10 @@ type Props = {
   onChange: (next: AnyBlock) => void;
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
+  onClose: () => void;
 };
 
-export function PropertiesPanel({ pkg, onPackageChange, block, onChange, onDelete, onDuplicate }: Props) {
+export function PropertiesPanel({ pkg, onPackageChange, block, onChange, onDelete, onDuplicate, onClose }: Props) {
 
   if (!block) {
     return <div className="right" />;
@@ -33,7 +34,18 @@ export function PropertiesPanel({ pkg, onPackageChange, block, onChange, onDelet
     <div className="right">
       <div className="panel-header">
         <div className="title">{def.label}</div>
-        <span className="type-pill">{block.type}</span>
+        <div className="panel-header-actions">
+          <span className="type-pill">{block.type}</span>
+          <button
+            type="button"
+            className="panel-close"
+            onClick={onClose}
+            aria-label="Close properties"
+            title="Close"
+          >
+            <Icons.Close size={14} />
+          </button>
+        </div>
       </div>
       <div className="panel-body">
         {block.type === "cover" && <CoverEditor blockId={block.id} data={block.data} set={set} />}

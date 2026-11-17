@@ -682,7 +682,7 @@ export default function App() {
           >
             <Icons.Redo size={14} />
           </button>
-          <div style={{ width: 1, height: 18, background: "var(--line)", margin: "0 4px" }} />
+          <div className="topbar-sep" />
           <button className="btn ghost tiny" onClick={newPackage}>
             New
           </button>
@@ -717,7 +717,8 @@ export default function App() {
                 onClick={() => setShareOpen(true)}
                 title="Open share details"
               >
-                Sharing · {peers.length} {peers.length === 1 ? "peer" : "peers"}
+                <span className="share-prefix">Sharing · </span>
+                {peers.length} {peers.length === 1 ? "peer" : "peers"}
               </button>
             </>
           )}
@@ -963,6 +964,7 @@ export default function App() {
         onChange={updateBlock}
         onDelete={deleteBlock}
         onDuplicate={duplicateBlock}
+        onClose={() => setSelectedId(null)}
       />
 
       {toast && <div className="toast">{toast}</div>}
