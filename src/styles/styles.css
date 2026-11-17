@@ -135,6 +135,7 @@ textarea { resize: vertical; }
   flex-shrink: 0;
 }
 .topbar .actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+.topbar-sep { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
 
 .btn {
   display: inline-flex;
@@ -437,7 +438,31 @@ textarea { resize: vertical; }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   border-bottom: 1px solid var(--line-2);
+}
+.right .panel-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.right .panel-header .panel-close {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  flex-shrink: 0;
+  transition: color 0.12s, background 0.12s;
+}
+.right .panel-header .panel-close:hover {
+  color: var(--ink);
+  background: var(--bg-2);
 }
 .right .panel-header .title {
   font-weight: 600;
@@ -1160,6 +1185,11 @@ textarea { resize: vertical; }
 }
 
 @media (max-width: 850px) {
+  /* Narrow viewports: the inspector slides over the document, so it must sit
+     above the floating panel toggle (z-index 6) and the zoom bar (z-index 7)
+     instead of having them float on top of it. */
+  .right { z-index: 10; }
+
   /* On very small screens, hide secondary textual topbar buttons */
   .topbar .actions > button.btn.ghost.tiny:not(.icon) {
     display: none;
@@ -1190,5 +1220,30 @@ textarea { resize: vertical; }
     left: 50%;
     max-width: calc(100vw - 16px);
   }
+
+  /* Phone-width viewports: the inspector covers the whole screen, while the
+     blocks panel stops just short of the edge so its floating toggle stays
+     reachable when the inspector is closed. */
+  .app:not(.left-collapsed) { --left-w: calc(100vw - 38px); }
+  .left { width: calc(100vw - 38px); }
+  .right { width: 100vw; }
+
+  /* Keep the topbar on one line at 375px: compact spacing, drop the presence
+     pill (the share pill already carries the peer count) and trim Export. */
+  .topbar { padding: 0 10px; gap: 8px; }
+  .topbar .pkg-title-wrap { min-width: 64px; }
+  .topbar .actions { gap: 4px; }
+  .topbar .presence { display: none; }
+  .share-prefix { display: none; }
+  .share-pill { white-space: nowrap; flex-shrink: 0; }
+  .topbar .menu-wrap button.btn:not(.ghost) {
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+  /* Drop the non-essential glyphs so Export / Settings / Sharing / Undo /
+     Redo and the title input all fit inside 375px without clipping. */
+  .topbar .topbar-sep { display: none; }
+  .topbar .menu-wrap button.btn:not(.ghost) svg:first-child { display: none; }
+  .topbar .actions > button.btn.icon { width: 28px; height: 28px; padding: 5px; }
 }
 
