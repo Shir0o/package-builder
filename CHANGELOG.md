@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/Shir0o/package-builder/compare/v0.2.1...v0.2.2) (2026-11-17)
+
+
+### Bug Fixes
+
+* **ui:** fix mobile inspector dismissal and topbar overflow ([#71](https://github.com/Shir0o/package-builder/issues/71)) ([63ccfe4](https://github.com/Shir0o/package-builder/commit/63ccfe4ca3158b2031eab056f859390d5a2409d9))
+
 ## [0.2.1](https://github.com/Shir0o/package-builder/compare/v0.2.0...v0.2.1) (2026-11-12)
 
 
