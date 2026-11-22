@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/Shir0o/package-builder/compare/v0.2.2...v0.2.3) (2026-11-22)
+
+
+### Bug Fixes
+
+* **ui:** add keyboard accessibility for menus and block list ([#74](https://github.com/Shir0o/package-builder/issues/74)) ([9fbc3a8](https://github.com/Shir0o/package-builder/commit/9fbc3a8d4c75f302f58d95e88e9a3eda9154269e))
+
 ## [0.2.2](https://github.com/Shir0o/package-builder/compare/v0.2.1...v0.2.2) (2026-11-17)
 
 
