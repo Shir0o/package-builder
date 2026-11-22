@@ -104,7 +104,15 @@ export function BlockList({
                 <Icons.Drag size={12} />
               </div>
               <div className="num">{i + 1}</div>
-              <div className="label">
+              <button
+                type="button"
+                className="label block-select"
+                aria-pressed={selectedId === b.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelect(b.id);
+                }}
+              >
                 <span className="type">{def.label}</span>
                 {(def.summary as (d: AnyBlock["data"]) => string)(b.data)}
                 {editor && (
@@ -116,10 +124,13 @@ export function BlockList({
                     {editor.user.name} editing
                   </span>
                 )}
-              </div>
+              </button>
               <div className="actions">
                 <button
+                  type="button"
                   title="Move up"
+                  aria-label={`Move ${def.label} block up`}
+                  disabled={i === 0}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (i > 0) onMove(i, i - 1);
@@ -128,7 +139,10 @@ export function BlockList({
                   <Icons.Up size={12} />
                 </button>
                 <button
+                  type="button"
                   title="Move down"
+                  aria-label={`Move ${def.label} block down`}
+                  disabled={i === pkg.blocks.length - 1}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (i < pkg.blocks.length - 1) onMove(i, i + 1);
@@ -137,7 +151,9 @@ export function BlockList({
                   <Icons.Down size={12} />
                 </button>
                 <button
+                  type="button"
                   title="Duplicate"
+                  aria-label={`Duplicate ${def.label} block`}
                   onClick={(e) => {
                     e.stopPropagation();
                     onDuplicate(b.id);
@@ -146,7 +162,9 @@ export function BlockList({
                   <Icons.Copy size={12} />
                 </button>
                 <button
+                  type="button"
                   title="Delete"
+                  aria-label={`Delete ${def.label} block`}
                   onClick={(e) => {
                     e.stopPropagation();
                     onDelete(b.id);
@@ -176,7 +194,12 @@ function BlockPicker({ onAdd }: { onAdd: (type: BlockTypeKey) => void }) {
           if (!t) return <div key={i} />;
           const def = BLOCK_TYPES[t];
           return (
-            <button key={t} onClick={() => onAdd(t)} title={def.desc}>
+            <button
+              key={t}
+              type="button"
+              onClick={() => onAdd(t)}
+              title={def.desc}
+            >
               <span className="h">{def.label}</span>
               <span className="d">{def.desc}</span>
             </button>

@@ -181,8 +181,13 @@ textarea { resize: vertical; }
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 100%;
   padding: 8px 10px;
+  border: none;
   border-radius: 4px;
+  background: transparent;
+  text-align: left;
+  font-family: inherit;
   font-size: 13px;
   color: var(--ink);
   cursor: pointer;
@@ -278,6 +283,17 @@ textarea { resize: vertical; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.block-select {
+  background: transparent;
+  border: none;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  min-width: 0;
+  cursor: pointer;
+  border-radius: 3px;
+}
 .block-row .label .type {
   font-family: var(--mono-font);
   font-size: 10px;
@@ -290,7 +306,9 @@ textarea { resize: vertical; }
   display: none;
   gap: 2px;
 }
-.block-row:hover .actions, .block-row.selected .actions { display: flex; }
+.block-row:hover .actions,
+.block-row.selected .actions,
+.block-row:focus-within .actions { display: flex; }
 .block-row .actions button {
   background: transparent;
   border: none;
@@ -301,6 +319,22 @@ textarea { resize: vertical; }
   place-items: center;
 }
 .block-row .actions button:hover { color: var(--ink); background: rgba(0,0,0,0.06); }
+.block-row .actions button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* === Focus visibility === */
+.btn:focus-visible,
+.panel-toggle:focus-visible,
+.add-block-grid button:focus-visible,
+.zoom-bar button:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+}
+.menu .item:focus-visible,
+.block-select:focus-visible,
+.block-row .actions button:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: -2px;
+}
 
 .add-block {
   margin: 4px 8px 12px;

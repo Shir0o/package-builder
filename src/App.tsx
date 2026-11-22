@@ -181,6 +181,9 @@ export default function App() {
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [zoom, setZoom] = useState(1);
   const centerRef = useRef<HTMLElement | null>(null);
+  const exportBtnRef = useRef<HTMLButtonElement | null>(null);
+  const exportMenuRef = useRef<HTMLDivElement | null>(null);
+  const settingsBtnRef = useRef<HTMLButtonElement | null>(null);
   const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
@@ -623,6 +626,27 @@ export default function App() {
     return () => el.removeEventListener("wheel", onWheel);
   }, [clampZoom]);
 
+  // Move focus into the export menu as soon as it opens.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const first = exportMenuRef.current?.querySelector<HTMLElement>(
+      '[role="menuitem"]',
+    );
+    first?.focus();
+  }, [menuOpen]);
+
+  // Escape anywhere closes Document Settings and returns focus to its trigger.
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const onKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setSettingsOpen(false);
+      settingsBtnRef.current?.focus();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [settingsOpen]);
+
   return (
     <CollabContext.Provider value={collabDoc}>
     <div
@@ -724,6 +748,8 @@ export default function App() {
           )}
           <div className="menu-wrap" style={{ display: "inline-block" }}>
             <button
+              type="button"
+              ref={settingsBtnRef}
               className={`btn ghost tiny${settingsOpen ? " active" : ""}`}
               onClick={() => setSettingsOpen((o) => !o)}
               title="Document settings"
@@ -738,7 +764,11 @@ export default function App() {
                   style={{ position: "fixed", inset: 0, zIndex: 40 }}
                   onClick={() => setSettingsOpen(false)}
                 />
-                <div className="menu settings-menu">
+                <div
+                  className="menu settings-menu"
+                  role="dialog"
+                  aria-label="Document Settings"
+                >
                   <div
                     style={{
                       fontWeight: 600,
@@ -819,7 +849,14 @@ export default function App() {
             )}
           </div>
           <div className="menu-wrap">
-            <button className="btn" onClick={() => setMenuOpen((o) => !o)}>
+            <button
+              type="button"
+              ref={exportBtnRef}
+              className="btn"
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+            >
               <Icons.Down2 size={13} /> Export <Icons.Chevron size={12} />
             </button>
             {menuOpen && (
@@ -828,8 +865,47 @@ export default function App() {
                   style={{ position: "fixed", inset: 0, zIndex: 40 }}
                   onClick={() => setMenuOpen(false)}
                 />
-                <div className="menu">
-                  <div
+                <div
+                  ref={exportMenuRef}
+                  className="menu"
+                  role="menu"
+                  aria-label="Export options"
+                  onKeyDown={(e) => {
+                    const items = Array.from(
+                      exportMenuRef.current?.querySelectorAll<HTMLElement>(
+                        '[role="menuitem"]',
+                      ) ?? [],
+                    );
+                    if (items.length === 0) return;
+                    const active = document.activeElement as HTMLElement | null;
+                    const idx = active ? items.indexOf(active) : -1;
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setMenuOpen(false);
+                      exportBtnRef.current?.focus();
+                    } else if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      items[idx < 0 ? 0 : (idx + 1) % items.length].focus();
+                    } else if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      items[
+                        idx < 0
+                          ? items.length - 1
+                          : (idx - 1 + items.length) % items.length
+                      ].focus();
+                    } else if (e.key === "Home") {
+                      e.preventDefault();
+                      items[0].focus();
+                    } else if (e.key === "End") {
+                      e.preventDefault();
+                      items[items.length - 1].focus();
+                    }
+                  }}
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
                     className="item"
                     onClick={() => {
                       exportPDF();
@@ -838,9 +914,11 @@ export default function App() {
                   >
                     <Icons.Print size={14} /> Print / Save as PDF
                     <span className="kbd">⌘P</span>
-                  </div>
+                  </button>
                   <div className="sep" />
-                  <div
+                  <button
+                    type="button"
+                    role="menuitem"
                     className="item"
                     onClick={() => {
                       exportHTML(pkg);
@@ -849,8 +927,10 @@ export default function App() {
                     }}
                   >
                     <Icons.Doc size={14} /> Standalone HTML
-                  </div>
-                  <div
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
                     className="item"
                     onClick={() => {
                       exportMarkdown(pkg);
@@ -859,8 +939,10 @@ export default function App() {
                     }}
                   >
                     <Icons.Doc size={14} /> Markdown (.md)
-                  </div>
-                  <div
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
                     className="item"
                     onClick={() => {
                       exportText(pkg);
@@ -869,9 +951,11 @@ export default function App() {
                     }}
                   >
                     <Icons.Doc size={14} /> Plain text (.txt)
-                  </div>
+                  </button>
                   <div className="sep" />
-                  <div
+                  <button
+                    type="button"
+                    role="menuitem"
                     className="item"
                     onClick={() => {
                       exportJSON(pkg);
@@ -880,7 +964,7 @@ export default function App() {
                     }}
                   >
                     <Icons.Doc size={14} /> Package source (.json)
-                  </div>
+                  </button>
                 </div>
               </>
             )}
@@ -903,9 +987,12 @@ export default function App() {
       />
 
       <button
+        type="button"
         className="panel-toggle left-toggle"
         onClick={() => setLeftCollapsed((c) => !c)}
         title={leftCollapsed ? "Show blocks panel" : "Hide blocks panel"}
+        aria-expanded={!leftCollapsed}
+        aria-label={leftCollapsed ? "Show blocks panel" : "Hide blocks panel"}
       >
         <Icons.Chevron size={12} />
       </button>
@@ -967,7 +1054,11 @@ export default function App() {
         onClose={() => setSelectedId(null)}
       />
 
-      {toast && <div className="toast">{toast}</div>}
+      {toast && (
+        <div className="toast" role="status" aria-live="polite">
+          {toast}
+        </div>
+      )}
 
       {shareOpen && roomId && (
         <ShareModal
